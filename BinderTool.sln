@@ -1,0 +1,35 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 2013
+VisualStudioVersion = 12.0.31101.0
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BinderTool", "BinderTool\BinderTool.csproj", "{1566BC27-029D-45AC-B16B-FAA2ACFB26D3}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BinderTool.Core", "BinderTool.Core\BinderTool.Core.csproj", "{D8F8A776-F5B5-46EF-8578-390B988D0D0B}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = ".nuget", ".nuget", "{8508E063-2158-4337-8206-1F40DEFE46C5}"
+	ProjectSection(SolutionItems) = preProject
+		.nuget\NuGet.Config = .nuget\NuGet.Config
+		.nuget\NuGet.exe = .nuget\NuGet.exe
+		.nuget\NuGet.targets = .nuget\NuGet.targets
+	EndProjectSection
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{1566BC27-029D-45AC-B16B-FAA2ACFB26D3}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{1566BC27-029D-45AC-B16B-FAA2ACFB26D3}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{1566BC27-029D-45AC-B16B-FAA2ACFB26D3}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{1566BC27-029D-45AC-B16B-FAA2ACFB26D3}.Release|Any CPU.Build.0 = Release|Any CPU
+		{D8F8A776-F5B5-46EF-8578-390B988D0D0B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D8F8A776-F5B5-46EF-8578-390B988D0D0B}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D8F8A776-F5B5-46EF-8578-390B988D0D0B}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D8F8A776-F5B5-46EF-8578-390B988D0D0B}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal
