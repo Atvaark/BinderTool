@@ -14,10 +14,8 @@ namespace BinderTool.Core
         {
             AesEngine engine = new AesEngine();
             KeyParameter parameter = new KeyParameter(key);
-
-            BufferedBlockCipher cipher = new BufferedBlockCipher(new CbcBlockCipher(engine));
+            BufferedBlockCipher cipher = new BufferedBlockCipher(engine);
             cipher.Init(false, parameter);
-
             return DecryptAes(inputStream, cipher);
         }
 
@@ -26,7 +24,6 @@ namespace BinderTool.Core
             AesEngine engine = new AesEngine();
             KeyParameter keyParameter = new KeyParameter(key);
             ICipherParameters parameters = new ParametersWithIV(keyParameter, iv);
-
             BufferedBlockCipher cipher = new BufferedBlockCipher(new CbcBlockCipher(engine));
             cipher.Init(true, parameters);
             return DecryptAes(inputStream, cipher);
@@ -40,7 +37,7 @@ namespace BinderTool.Core
             ivNew[13] = 0;
             ivNew[14] = 0;
             ivNew[15] = 0;
-            // TODO: Analyze how the game calculates the iv. Maybe it is salted?
+            // TODO: Analyze how the game calculates the iv. Maybe it is salted/encrypted?
 
             return DecryptAesCtr(inputStream, key, ivNew);
         }
