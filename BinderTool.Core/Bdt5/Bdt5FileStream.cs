@@ -21,7 +21,7 @@ namespace BinderTool.Core.Bdt5
             byte[] buffer = new byte[entry.FileSize];
             _inputStream.Read(buffer, 0, entry.FileSize);
             return new MemoryStream(buffer);
-            ;
+            // TODO: Return a Stream instead of a MemoryStream
         }
 
         public static Bdt5FileStream OpenFile(string path, FileMode mode, FileAccess access)

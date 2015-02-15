@@ -5,9 +5,12 @@ using System.Linq;
 using System.Reflection;
 using System.Text;
 using BinderTool.Core;
+using BinderTool.Core.Bdf4;
 using BinderTool.Core.Bdt5;
+using BinderTool.Core.Bhf4;
 using BinderTool.Core.BHD5;
 using BinderTool.Core.Bnd4;
+using BinderTool.Core.Common;
 using BinderTool.Core.Dcx;
 
 namespace BinderTool
@@ -19,26 +22,28 @@ namespace BinderTool
 
         private static void Main(string[] args)
         {
-            if (args.Length != 2)
+            if (args.Length < 1 || args.Length > 2)
             {
                 ShowUsageInfo();
                 return;
             }
 
             string path = args[0];
-            string outputPath = args[1];
-
             if (File.Exists(path) == false)
             {
                 ShowUsageInfo();
                 return;
             }
+            string outputPath = args.Length == 2
+                ? args[1]
+                : Path.Combine(Path.GetDirectoryName(path), Path.GetFileNameWithoutExtension(path));
+            Directory.CreateDirectory(outputPath);
 
-            if (path.EndsWith("dcx"))
+            if (path.EndsWith("dcx", StringComparison.InvariantCultureIgnoreCase))
             {
                 UnpackDcxFile(path, outputPath);
             }
-            else if (path.EndsWith("bdt"))
+            else if (path.EndsWith("Ebl.bdt", StringComparison.InvariantCultureIgnoreCase))
             {
                 if (path.EndsWith("Ebl.bdt", StringComparison.InvariantCultureIgnoreCase) == false)
                 {
@@ -49,12 +54,16 @@ namespace BinderTool
                 InitPossibleFileNames();
                 UnpackBdtFile(path, outputPath);
             }
-            else if (path.EndsWith("bnd") || path.EndsWith("bnd4")) // TODO: Add the remaining bnd4 file extensions
+            else if (path.EndsWith("bdt", StringComparison.InvariantCultureIgnoreCase))
+            {
+                UnpackBdf4File(path, outputPath);
+            }
+            else if (path.EndsWith("bnd", StringComparison.InvariantCultureIgnoreCase) ||
+                     path.EndsWith("bnd4", StringComparison.InvariantCultureIgnoreCase))
+                // TODO: Add the remaining bnd4 file extensions
             {
                 UnpackBndFile(path, outputPath);
             }
-
-            // TODO: Create a BDF4 unpacker
         }
 
         private static void ShowUsageInfo()
@@ -73,6 +82,7 @@ namespace BinderTool
             // e.g. this is pair of texture packs has different name hashes while the latter contains the same textures but in higher quality.
             // 2500896703   gamedata   /model/chr/c3096.texbnd
             // 1276904764   chrhq      /???.texbnd
+            // TODO: Remove the hash value from the dictionary and calculate it here.
             string dictionaryPath = Path.Combine(Path.GetDirectoryName(Assembly.GetEntryAssembly().Location),
                 "PossibleFilenames.csv");
             string[] lines = File.ReadAllLines(dictionaryPath);
@@ -168,11 +178,13 @@ namespace BinderTool
                 List<string> fileNames;
                 if (archiveDictionary.TryGetValue(hash, out fileNames))
                 {
-                    if (fileNames.Count == 1)
-                    {
-                        fileName = fileNames.Single().Replace('/', '\\').TrimStart('\\');
-                        return true;
-                    }
+                    // TODO: There should be no hash collisions inside an archive.
+                    //if (fileNames.Count == 1)
+                    //{
+                    //fileName = fileNames.Single().Replace('/', '\\').TrimStart('\\');
+                    fileName = fileNames.First().Replace('/', '\\').TrimStart('\\');
+                    return true;
+                    //}
                 }
             }
             return false;
@@ -207,69 +219,17 @@ namespace BinderTool
                         data.Position = 0;
 
                         string fileName = GetFileName(entry.FileNameHash, archiveNames);
+
                         if (fileName == "")
                         {
-                            string extension = "";
-                            if (signature == "BND4")
+                            string extension;
+                            if (TryGetFileExtension(signature, out extension) == false)
                             {
-                                extension = ".bnd4";
-                                //Bnd4File bnd4File = Bnd4File.Read(data);
-                            }
-                            else if (signature == "DCX\0")
-                            {
-                                extension = ".dcx";
-                                DcxFile dcxFile = DcxFile.Read(data);
-                                data = new MemoryStream(dcxFile.DecompressedData);
-                                // TODO: Remove dcx and guess the file extension again?
-                            }
-                            else if (signature == "TAE ")
-                            {
-                                extension = ".tae";
-                            }
-                            else if (signature == "fSSL")
-                            {
-                                extension = ".fssl";
-                            }
-                            else if (signature == "TPF\0")
-                            {
-                                extension = ".tpf";
-                            }
-                            else if (signature == "PFBB")
-                            {
-                                extension = ".pfbb";
-                            }
-                            else if (signature == "BHF4")
-                            {
-                                extension = ".bhf4";
-                            }
-                            else if (signature == "BDF4")
-                            {
-                                extension = ".bdf4";
-                            }
-                            else if (signature == "OBJB")
-                            {
-                                extension = ".breakobj";
-                            }
-                            else if (signature == "filt")
-                            {
-                                extension = ".fltparam";
-                            }
-                            else if (signature == "VSDF")
-                            {
-                                extension = ".vsd";
-                            }
-                            else if (signature == "NVG2")
-                            {
-                                extension = ".ngp";
-                            }
-                            else
-                            {
-                                extension = ".dat";
+                                extension = ".bin";
                             }
 
-
-                            fileName = string.Format("{0:D10}_{1:D10}_{2:D10}_{3}{4}", entry.FileNameHash,
-                                entry.FileOffset, entry.FileSize, fileNameWithoutExtension, extension);
+                            fileName = string.Format("{0:D10}_{1}{2}", entry.FileNameHash,
+                                fileNameWithoutExtension, extension);
                         }
 
                         string newFileNamePath = Path.Combine(outputDirectory, fileName);
@@ -278,6 +238,51 @@ namespace BinderTool
                     }
                 }
             }
+        }
+
+        private static bool TryGetFileExtension(string signature, out string extension)
+        {
+            extension = null;
+            switch (signature)
+            {
+                case "BND4":
+                    extension = ".bnd";
+                    return true;
+                case "BHF4":
+                    extension = ".bhd";
+                    return true;
+                case "BDF4":
+                    extension = ".bdt";
+                    return true;
+                case "DCX\0":
+                    extension = ".dcx";
+                    return true;
+                case "TAE ":
+                    extension = ".tae";
+                    return true;
+                case "fSSL":
+                    extension = ".fssl";
+                    return true;
+                case "TPF\0":
+                    extension = ".tpf";
+                    return true;
+                case "PFBB":
+                    extension = ".pfbb";
+                    return true;
+                case "OBJB":
+                    extension = ".breakobj";
+                    return true;
+                case "filt":
+                    extension = ".fltparam";
+                    return true;
+                case "VSDF":
+                    extension = ".vsd";
+                    return true;
+                case "NVG2":
+                    extension = ".ngp";
+                    return true;
+            }
+            return false;
         }
 
         private static void UnpackBndFile(string path, string outputPath)
@@ -295,14 +300,62 @@ namespace BinderTool
             }
         }
 
-        private static void UnpackDcxFile(string path, string outputPath)
+        private static void UnpackDcxFile(string dcxPath, string outputPath)
         {
+            string unpackedFileName = Path.GetFileNameWithoutExtension(dcxPath);
+            string unpackedFilePath = Path.Combine(outputPath, unpackedFileName);
+
+
             Directory.CreateDirectory(Path.GetDirectoryName(outputPath));
 
-            using (FileStream input = new FileStream(path, FileMode.Open))
+            using (FileStream input = new FileStream(dcxPath, FileMode.Open))
             {
                 DcxFile dcxFile = DcxFile.Read(input);
-                File.WriteAllBytes(outputPath, dcxFile.DecompressedData);
+                File.WriteAllBytes(unpackedFilePath, dcxFile.DecompressedData);
+            }
+        }
+
+        private static void UnpackBdf4File(string bdfPath, string outputPath)
+        {
+            var bdfDirectory = Path.GetDirectoryName(bdfPath);
+            var fileNameWithoutExtension = Path.GetFileNameWithoutExtension(bdfPath);
+            // TODO: Add a command line option to specify the bhf file. (Since bhf4 and bdf4 have different hashes)
+
+            var bhf4FilePath = Path.Combine(bdfDirectory, fileNameWithoutExtension + ".bhd");
+
+            if (File.Exists(bhf4FilePath) == false)
+            {
+                // HACK: Adding 132 to a hash of a text that ends with XXX.bdt will give you the hash of XXX.bhd.
+                string[] split = fileNameWithoutExtension.Split('_');
+                uint hash;
+                if (uint.TryParse(split[0], out hash))
+                {
+                    hash += 132;
+                    split[0] = hash.ToString();
+                    bhf4FilePath = Path.Combine(bdfDirectory, String.Join("_", split) + ".bhd");
+                }
+            }
+
+
+            using (FileStream bhf4Input = new FileStream(bhf4FilePath, FileMode.Open))
+            using (FileStream bdf4Input = new FileStream(bdfPath, FileMode.Open))
+            {
+                Bhf4File bhf4File = Bhf4File.ReadBhf4File(bhf4Input);
+                Bdf4File bdf4File = Bdf4File.ReadBdf4File(bdf4Input);
+                foreach (var file in bdf4File.ReadData(bdf4Input, bhf4File))
+                {
+                    ExportFile(file, outputPath);
+                }
+            }
+        }
+
+        private static void ExportFile(DataContainer file, string outputPath)
+        {
+            string outputFilePath = Path.Combine(outputPath, file.Name);
+            Directory.CreateDirectory(Path.GetDirectoryName(outputFilePath));
+            using (FileStream outputStream = new FileStream(outputFilePath, FileMode.Create))
+            {
+                file.DataStream.CopyTo(outputStream);
             }
         }
     }

@@ -47,6 +47,8 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Bdf4\Bdf4File.cs" />
+    <Compile Include="Common\DataContainer.cs" />
     <Compile Include="Bdt5\Bdt5FileStream.cs" />
     <Compile Include="Bhd5\Bhd5AesKey.cs" />
     <Compile Include="Bhd5\Bhd5Bucket.cs" />
@@ -54,6 +56,8 @@
     <Compile Include="Bhd5\Bhd5File.cs" />
     <Compile Include="Bhd5\Bhd5FileReadException.cs" />
     <Compile Include="Bhd5\Bhd5SaltedShaHash.cs" />
+    <Compile Include="Bhf4\Bhf4Entry.cs" />
+    <Compile Include="Bhf4\Bhf4File.cs" />
     <Compile Include="Bnd4\Bnd4File.cs" />
     <Compile Include="Bnd4\Bnd4FileEntry.cs" />
     <Compile Include="CryptographyUtility.cs" />
