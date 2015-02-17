@@ -35,3 +35,14 @@ Unpacking a dcx file
 ```
 BinderTool 01.febnd.dcx
 ```
+
+##Remarks
+
+Alternative file extensions for bdt files are:
+
+Extension        | Content
+---------------- | ------------
+gibdt            | Map models
+hkdbdt           | Map models (Havok)
+mapbdt           | Map models
+tpfbdt           | Map textures
