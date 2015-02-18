@@ -38,11 +38,14 @@ BinderTool 01.febnd.dcx
 
 ##Remarks
 
-Alternative file extensions for bdt files are:
-
+###Alternative file extensions for bdt files
 Extension        | Content
 ---------------- | ------------
 gibdt            | Map models
 hkdbdt           | Map models (Havok)
 mapbdt           | Map models
 tpfbdt           | Map textures
+
+###File names
+The file names in the PossibleFilenames.csv are just guesses. They were automatically generated and contain several collisions. When there are multiple file names for a hash the first file name gets picked. 
+If a file name can not be found by its hash value, the file extension is guessed and the file is called after the hash and the archive it originates from. Since there are a few file formats (e.g. .param) without a magic number at offset 0 there will be a few .dat files that could contain anything.
