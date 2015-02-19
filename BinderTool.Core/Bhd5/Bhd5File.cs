@@ -2,9 +2,8 @@
 using System.IO;
 using System.Linq;
 using System.Text;
-using BinderTool.Core.Bhd5;
 
-namespace BinderTool.Core.BHD5
+namespace BinderTool.Core.Bhd5
 {
     public class Bhd5File
     {

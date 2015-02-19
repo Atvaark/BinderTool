@@ -1,5 +1,4 @@
-﻿using System;
-using System.IO;
+﻿using System.IO;
 using System.Text;
 using ICSharpCode.SharpZipLib.Zip.Compression.Streams;
 
@@ -12,8 +11,12 @@ namespace BinderTool.Core.Dcx
 
         public override MemoryStream CompressData(byte[] uncompressedData)
         {
-            throw new NotImplementedException();
-            // TODO: Compress using SharpZipLib
+            MemoryStream compressedBufferStream = new MemoryStream();
+            using (DeflaterOutputStream deflaterStream = new DeflaterOutputStream(compressedBufferStream))
+            {
+                deflaterStream.Write(uncompressedData, 0, uncompressedData.Length);
+            }
+            return compressedBufferStream;
         }
 
         public override MemoryStream DecompressData(byte[] compressedData)
@@ -28,7 +31,7 @@ namespace BinderTool.Core.Dcx
         public static DeflateCompression Read(Stream inputStream)
         {
             DeflateCompression result = new DeflateCompression();
-            BinaryReader reader = new BinaryReader(inputStream, Encoding.UTF8, true);
+            BinaryReader reader = new BinaryReader(inputStream, Encoding.Default, true);
             int headerSize = reader.ReadInt32();
             result.Level = reader.ReadInt32();
             reader.Skip(16);

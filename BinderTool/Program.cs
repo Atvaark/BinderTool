@@ -7,8 +7,8 @@ using System.Text;
 using BinderTool.Core;
 using BinderTool.Core.Bdf4;
 using BinderTool.Core.Bdt5;
+using BinderTool.Core.Bhd5;
 using BinderTool.Core.Bhf4;
-using BinderTool.Core.BHD5;
 using BinderTool.Core.Bnd4;
 using BinderTool.Core.Common;
 using BinderTool.Core.Dcx;
@@ -45,12 +45,6 @@ namespace BinderTool
             }
             else if (path.EndsWith("Ebl.bdt", StringComparison.InvariantCultureIgnoreCase))
             {
-                if (path.EndsWith("Ebl.bdt", StringComparison.InvariantCultureIgnoreCase) == false)
-                {
-                    Console.WriteLine("Error: The BDT file has to end with Ebl.bdt");
-                    return;
-                }
-
                 InitPossibleFileNames();
                 UnpackBdtFile(path, outputPath);
             }
@@ -58,9 +52,7 @@ namespace BinderTool
             {
                 UnpackBdf4File(path, outputPath);
             }
-            else if (path.EndsWith("bnd", StringComparison.InvariantCultureIgnoreCase) ||
-                     path.EndsWith("bnd4", StringComparison.InvariantCultureIgnoreCase))
-                // TODO: Add the remaining bnd4 file extensions
+            else if (path.EndsWith("bnd", StringComparison.InvariantCultureIgnoreCase))
             {
                 UnpackBndFile(path, outputPath);
             }
@@ -69,9 +61,9 @@ namespace BinderTool
         private static void ShowUsageInfo()
         {
             Console.WriteLine("BinderTool by Atvaark\n" +
-                              "  A tool for unpacking Dark Souls II Ebl.Bdt, Bnd4 and Dcx files\n" +
+                              "  A tool for unpacking Dark Souls II Ebl.Bdt, Bdt, Bnd and Dcx files\n" +
                               "Usage:\n" +
-                              "  BinderTool file_path output_path\n" +
+                              "  BinderTool file_path [output_path]\n" +
                               "Examples:\n" +
                               "  BinderTool GameDataEbl.bdt GameDataDump");
         }
