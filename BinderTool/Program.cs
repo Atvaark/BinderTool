@@ -310,15 +310,14 @@ namespace BinderTool
         private static void UnpackBdf4File(string bdfPath, string outputPath)
         {
             var bdfDirectory = Path.GetDirectoryName(bdfPath);
-            var fileNameWithoutExtension = Path.GetFileNameWithoutExtension(bdfPath);
             // TODO: Add a command line option to specify the bhf file. (Since bhf4 and bdf4 have different hashes)
 
-            var bhf4FilePath = Path.Combine(bdfDirectory, fileNameWithoutExtension + ".bhd");
+            var bhf4FilePath = bdfPath.Substring(0, bdfPath.Length - 3) + "bhd"; 
 
             if (File.Exists(bhf4FilePath) == false)
             {
                 // HACK: Adding 132 to a hash of a text that ends with XXX.bdt will give you the hash of XXX.bhd.
-                string[] split = fileNameWithoutExtension.Split('_');
+                string[] split = Path.GetFileNameWithoutExtension(bdfPath).Split('_');
                 uint hash;
                 if (uint.TryParse(split[0], out hash))
                 {
