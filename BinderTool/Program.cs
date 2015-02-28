@@ -38,30 +38,32 @@ namespace BinderTool
             string outputPath = args.Length == 2
                 ? args[1]
                 : Path.Combine(Path.GetDirectoryName(path), Path.GetFileNameWithoutExtension(path));
-            Directory.CreateDirectory(outputPath);
 
             if (path.Equals("enc_regulation.bnd.dcx", StringComparison.InvariantCultureIgnoreCase))
             {
                 DecryptRegulationFile(path);
                 UnpackDcxFile("regulation.bnd.dcx", "regulation.bnd");
                 UnpackBndFile("regulation.bnd\\regulation.bnd", "regulation.bnd\\regulation");
-            }
-            else if (path.EndsWith("dcx", StringComparison.InvariantCultureIgnoreCase))
-            {
-                UnpackDcxFile(path, outputPath);
-            }
-            else if (path.EndsWith("Ebl.bdt", StringComparison.InvariantCultureIgnoreCase))
-            {
-                InitPossibleFileNames();
-                UnpackBdtFile(path, outputPath);
-            }
-            else if (path.EndsWith("bdt", StringComparison.InvariantCultureIgnoreCase))
-            {
-                UnpackBdf4File(path, outputPath);
-            }
-            else if (path.EndsWith("bnd", StringComparison.InvariantCultureIgnoreCase))
-            {
-                UnpackBndFile(path, outputPath);
+            } else {
+                Directory.CreateDirectory(outputPath);
+
+                if (path.EndsWith("dcx", StringComparison.InvariantCultureIgnoreCase))
+                {
+                    UnpackDcxFile(path, outputPath);
+                }
+                else if (path.EndsWith("Ebl.bdt", StringComparison.InvariantCultureIgnoreCase))
+                {
+                    InitPossibleFileNames();
+                    UnpackBdtFile(path, outputPath);
+                }
+                else if (path.EndsWith("bdt", StringComparison.InvariantCultureIgnoreCase))
+                {
+                    UnpackBdf4File(path, outputPath);
+                }
+                else if (path.EndsWith("bnd", StringComparison.InvariantCultureIgnoreCase))
+                {
+                    UnpackBndFile(path, outputPath);
+                }
             }
         }
 

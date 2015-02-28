@@ -3,7 +3,6 @@ using System.IO;
 using System.Text;
 using BinderTool.Core.IO;
 
-
 namespace BinderTool.Core.Regulation
 {
     public class RegulationFile
@@ -19,8 +18,7 @@ namespace BinderTool.Core.Regulation
         public byte[] EncryptedData { get; private set; }
         public byte[] DecryptedData
         {
-            get {
-                
+            get {                
                 Stream stream = new MemoryStream(EncryptedData);
                 return CryptographyUtility.DecryptAesCtrDsII(stream, RegulationKey, RegulationIV).ToArray(); 
             }
@@ -45,13 +43,11 @@ namespace BinderTool.Core.Regulation
                 RegulationKey[i / 2] = Convert.ToByte(RegulationKeyStr.Substring(i, 2), 16);
             }
 
-            RegulationIV = reader.ReadBytes(16);
-            for (int i = 11; i != 0; i--)
+            RegulationIV[00] = 0x80;            
+            for (int i = 1; i <= 11; i++)
             {
-                RegulationIV[i] = RegulationIV[i - 1];
-            }
-
-            RegulationIV[00] = 0x80;
+                RegulationIV[i] = reader.ReadByte();
+            }            
             RegulationIV[12] = 0x00;
             RegulationIV[13] = 0x00;
             RegulationIV[14] = 0x00;
