@@ -67,6 +67,7 @@
     <Compile Include="ExtensionMethods.cs" />
     <Compile Include="IO\BigEndianBinaryReader.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="Regulation\RegulationFile.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
