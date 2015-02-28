@@ -12,10 +12,7 @@ using BinderTool.Core.Bhf4;
 using BinderTool.Core.Bnd4;
 using BinderTool.Core.Common;
 using BinderTool.Core.Dcx;
-<<<<<<< HEAD
 using BinderTool.Core.Regulation;
-=======
->>>>>>> origin/master
 
 namespace BinderTool
 {
@@ -43,7 +40,6 @@ namespace BinderTool
                 : Path.Combine(Path.GetDirectoryName(path), Path.GetFileNameWithoutExtension(path));
             Directory.CreateDirectory(outputPath);
 
-<<<<<<< HEAD
             if (path.Equals("enc_regulation.bnd.dcx", StringComparison.InvariantCultureIgnoreCase))
             {
                 DecryptRegulationFile(path);
@@ -51,9 +47,6 @@ namespace BinderTool
                 UnpackBndFile("regulation.bnd\\regulation.bnd", "regulation.bnd\\regulation");
             }
             else if (path.EndsWith("dcx", StringComparison.InvariantCultureIgnoreCase))
-=======
-            if (path.EndsWith("dcx", StringComparison.InvariantCultureIgnoreCase))
->>>>>>> origin/master
             {
                 UnpackDcxFile(path, outputPath);
             }
@@ -306,7 +299,6 @@ namespace BinderTool
             }
         }
 
-<<<<<<< HEAD
         private static void DecryptRegulationFile(string regPath)
         {
             string decryptedFileName = "regulation.bnd.dcx";
@@ -318,20 +310,12 @@ namespace BinderTool
             }
         }
 
-=======
->>>>>>> origin/master
         private static void UnpackDcxFile(string dcxPath, string outputPath)
         {
             string unpackedFileName = Path.GetFileNameWithoutExtension(dcxPath);
             string unpackedFilePath = Path.Combine(outputPath, unpackedFileName);
 
-<<<<<<< HEAD
             Directory.CreateDirectory(outputPath);
-=======
-
-            Directory.CreateDirectory(Path.GetDirectoryName(outputPath));
-
->>>>>>> origin/master
             using (FileStream input = new FileStream(dcxPath, FileMode.Open))
             {
                 DcxFile dcxFile = DcxFile.Read(input);
@@ -359,10 +343,6 @@ namespace BinderTool
                 }
             }
 
-<<<<<<< HEAD
-=======
-
->>>>>>> origin/master
             using (FileStream bhf4Input = new FileStream(bhf4FilePath, FileMode.Open))
             using (FileStream bdf4Input = new FileStream(bdfPath, FileMode.Open))
             {
@@ -378,10 +358,7 @@ namespace BinderTool
         private static void ExportFile(DataContainer file, string outputPath)
         {
             string outputFilePath = Path.Combine(outputPath, file.Name);
-<<<<<<< HEAD
 
-=======
->>>>>>> origin/master
             Directory.CreateDirectory(Path.GetDirectoryName(outputFilePath));
             using (FileStream outputStream = new FileStream(outputFilePath, FileMode.Create))
             {
