@@ -68,6 +68,8 @@
     <Compile Include="IO\BigEndianBinaryReader.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Regulation\RegulationFile.cs" />
+    <Compile Include="Sl2\Sl2File.cs" />
+    <Compile Include="Sl2\Sl2UserData.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />

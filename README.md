@@ -1,5 +1,5 @@
 # BinderTool
-A Dark Souls II bdt, bnd and dcx unpacking tool
+A Dark Souls II bdt, bnd, dcx and sl2 unpacking tool
 
 ##Requirements
 ```
@@ -42,7 +42,7 @@ BinderTool 01.febnd.dcx
 Extension        | Content
 ---------------- | ------------
 gibdt            | Map models
-hkdbdt           | Map models (Havok)
+hkxbdt           | Map models (Havok)
 mapbdt           | Map models
 tpfbdt           | Map textures
 

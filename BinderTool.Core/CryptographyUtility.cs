@@ -24,8 +24,9 @@ namespace BinderTool.Core
             AesEngine engine = new AesEngine();
             KeyParameter keyParameter = new KeyParameter(key);
             ICipherParameters parameters = new ParametersWithIV(keyParameter, iv);
+
             BufferedBlockCipher cipher = new BufferedBlockCipher(new CbcBlockCipher(engine));
-            cipher.Init(true, parameters);
+            cipher.Init(false, parameters);
             return DecryptAes(inputStream, cipher);
         }
 

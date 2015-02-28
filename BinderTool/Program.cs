@@ -13,6 +13,7 @@ using BinderTool.Core.Bnd4;
 using BinderTool.Core.Common;
 using BinderTool.Core.Dcx;
 using BinderTool.Core.Regulation;
+using BinderTool.Core.Sl2;
 
 namespace BinderTool
 {
@@ -62,12 +63,16 @@ namespace BinderTool
             {
                 UnpackBndFile(path, outputPath);
             }
+            else if (path.EndsWith("sl2", StringComparison.CurrentCultureIgnoreCase))
+            {
+                UnpackSl2File(path, outputPath);
+            }
         }
 
         private static void ShowUsageInfo()
         {
             Console.WriteLine("BinderTool by Atvaark\n" +
-                              "  A tool for unpacking Dark Souls II Ebl.Bdt, Bdt, Bnd and Dcx files\n" +
+                              "  A tool for unpacking Dark Souls II Ebl.Bdt, Bdt, Bnd, Dcx and Sl2 files\n" +
                               "Usage:\n" +
                               "  BinderTool file_path [output_path]\n" +
                               "Examples:\n" +
@@ -187,7 +192,7 @@ namespace BinderTool
             }
             return false;
         }
-        
+
         private static void UnpackBdtFile(string bdtPath, string outputDirectory)
         {
             var fileNameWithoutExtension = Path.GetFileName(bdtPath).Replace("Ebl.bdt", "");
@@ -198,7 +203,6 @@ namespace BinderTool
 
             Bhd5File bhdFile = Bhd5File.Read(CryptographyUtility.DecryptRsa(bhdPath, pemPath));
             Bdt5FileStream bdtStream = Bdt5FileStream.OpenFile(bdtPath, FileMode.Open, FileAccess.Read);
-            Directory.CreateDirectory(outputDirectory);
 
             foreach (var bucket in bhdFile.GetBuckets())
             {
@@ -293,13 +297,25 @@ namespace BinderTool
 
         private static void UnpackBndFile(Stream input, string outputPath)
         {
-            Directory.CreateDirectory(outputPath);
-            Bnd4File file = Bnd4File.Read(input);
+            Bnd4File file = Bnd4File.ReadBnd4File(input);
 
             foreach (var entry in file.Entries)
             {
                 string outputFilePath = Path.Combine(outputPath, entry.FileName);
                 File.WriteAllBytes(outputFilePath, entry.EntryData);
+            }
+        }
+
+        private static void UnpackSl2File(string path, string outputPath)
+        {
+            using (FileStream input = new FileStream(path, FileMode.Open))
+            {
+                Sl2File sl2File = Sl2File.ReadSl2File(input);
+                foreach (var userData in sl2File.UserData)
+                {
+                    string outputFilePath = Path.Combine(outputPath, userData.UserDataName);
+                    File.WriteAllBytes(outputFilePath, userData.DecryptedUserData);
+                }
             }
         }
 

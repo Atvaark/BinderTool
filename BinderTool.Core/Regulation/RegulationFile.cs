@@ -54,7 +54,7 @@ namespace BinderTool.Core.Regulation
             _iv[15] = 0x01;
 
             input.Seek(RegulationHeaderSize, SeekOrigin.Begin);
-            EncryptedData = reader.ReadBytes((int)input.Length - RegulationHeaderSize);
+            EncryptedData = reader.ReadBytes((int) input.Length - RegulationHeaderSize);
         }
     }
 }

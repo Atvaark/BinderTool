@@ -20,9 +20,15 @@ namespace BinderTool.Core.Bnd4
             get { return _entries; }
         }
 
-        public static Bnd4File Read(Stream inputStream)
+        public static Bnd4File ReadBnd4File(Stream inputStream)
         {
-            Bnd4File result = new Bnd4File();
+            Bnd4File bnd4File = new Bnd4File();
+            bnd4File.Read(inputStream);
+            return bnd4File;
+        }
+
+        private void Read(Stream inputStream)
+        {
             BinaryReader reader = new BinaryReader(inputStream, Encoding.UTF8, true);
             string signature = reader.ReadString(4);
             if (signature != Bnd4Signature)
@@ -36,9 +42,7 @@ namespace BinderTool.Core.Bnd4
             int dataOffset = reader.ReadInt32();
             reader.Skip(20);
 
-
             //TODO: Create a new reader object if the text encoding was guessed incorrectly
-
 
             // Directory section
             for (int i = 0; i < fileCount; i++)
@@ -74,10 +78,9 @@ namespace BinderTool.Core.Bnd4
                     fileName = reader.ReadNullTerminatedString();
                 }
                 reader.Seek(fileEntryOffset);
-                result._entries.Add(Bnd4FileEntry.Read(inputStream, fileEntrySize, fileName));
+                _entries.Add(Bnd4FileEntry.Read(inputStream, fileEntrySize, fileName));
                 reader.Seek(position);
             }
-            return result;
         }
     }
 }
