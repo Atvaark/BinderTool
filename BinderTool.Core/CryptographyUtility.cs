@@ -31,6 +31,9 @@ namespace BinderTool.Core
 
         public static MemoryStream DecryptAesCtrDsII(Stream inputStream, byte[] key, byte[] iv)
         {
+<<<<<<< HEAD
+            return DecryptAesCtr(inputStream, key, iv);
+=======
             byte[] ivNew = new byte[16];
             ivNew[0] = 128;
             ivNew[12] = 0;
@@ -40,6 +43,7 @@ namespace BinderTool.Core
             // TODO: Analyze how the game calculates the iv. Maybe it is salted/encrypted?
 
             return DecryptAesCtr(inputStream, key, ivNew);
+>>>>>>> origin/master
         }
 
         public static MemoryStream DecryptAesCtr(Stream inputStream, byte[] key, byte[] iv)
