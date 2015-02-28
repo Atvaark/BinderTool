@@ -39,31 +39,28 @@ namespace BinderTool
                 ? args[1]
                 : Path.Combine(Path.GetDirectoryName(path), Path.GetFileNameWithoutExtension(path));
 
-            if (path.Equals("enc_regulation.bnd.dcx", StringComparison.InvariantCultureIgnoreCase))
-            {
-                DecryptRegulationFile(path);
-                UnpackDcxFile("regulation.bnd.dcx", "regulation.bnd");
-                UnpackBndFile("regulation.bnd\\regulation.bnd", "regulation.bnd\\regulation");
-            } else {
-                Directory.CreateDirectory(outputPath);
+            Directory.CreateDirectory(outputPath);
 
-                if (path.EndsWith("dcx", StringComparison.InvariantCultureIgnoreCase))
-                {
-                    UnpackDcxFile(path, outputPath);
-                }
-                else if (path.EndsWith("Ebl.bdt", StringComparison.InvariantCultureIgnoreCase))
-                {
-                    InitPossibleFileNames();
-                    UnpackBdtFile(path, outputPath);
-                }
-                else if (path.EndsWith("bdt", StringComparison.InvariantCultureIgnoreCase))
-                {
-                    UnpackBdf4File(path, outputPath);
-                }
-                else if (path.EndsWith("bnd", StringComparison.InvariantCultureIgnoreCase))
-                {
-                    UnpackBndFile(path, outputPath);
-                }
+            if (path.EndsWith("enc_regulation.bnd.dcx", StringComparison.InvariantCultureIgnoreCase))
+            {
+                UnpackRegulationFile(path, outputPath);
+            }
+            else if (path.EndsWith("dcx", StringComparison.InvariantCultureIgnoreCase))
+            {
+                UnpackDcxFile(path, outputPath);
+            }
+            else if (path.EndsWith("Ebl.bdt", StringComparison.InvariantCultureIgnoreCase))
+            {
+                InitPossibleFileNames();
+                UnpackBdtFile(path, outputPath);
+            }
+            else if (path.EndsWith("bdt", StringComparison.InvariantCultureIgnoreCase))
+            {
+                UnpackBdf4File(path, outputPath);
+            }
+            else if (path.EndsWith("bnd", StringComparison.InvariantCultureIgnoreCase))
+            {
+                UnpackBndFile(path, outputPath);
             }
         }
 
@@ -190,7 +187,7 @@ namespace BinderTool
             }
             return false;
         }
-
+        
         private static void UnpackBdtFile(string bdtPath, string outputDirectory)
         {
             var fileNameWithoutExtension = Path.GetFileName(bdtPath).Replace("Ebl.bdt", "");
@@ -288,27 +285,31 @@ namespace BinderTool
 
         private static void UnpackBndFile(string path, string outputPath)
         {
-            Directory.CreateDirectory(outputPath);
             using (FileStream input = new FileStream(path, FileMode.Open))
             {
-                Bnd4File file = Bnd4File.Read(input);
-
-                foreach (var entry in file.Entries)
-                {
-                    string outputFilePath = Path.Combine(outputPath, entry.FileName);
-                    File.WriteAllBytes(outputFilePath, entry.EntryData);
-                }
+                UnpackBndFile(input, outputPath);
             }
         }
 
-        private static void DecryptRegulationFile(string regPath)
+        private static void UnpackBndFile(Stream input, string outputPath)
         {
-            string decryptedFileName = "regulation.bnd.dcx";
+            Directory.CreateDirectory(outputPath);
+            Bnd4File file = Bnd4File.Read(input);
 
-            using (FileStream input = new FileStream(regPath, FileMode.Open))
+            foreach (var entry in file.Entries)
             {
-                RegulationFile regFile = RegulationFile.DecryptRegulationFile(input);
-                File.WriteAllBytes(decryptedFileName, regFile.DecryptedData);
+                string outputFilePath = Path.Combine(outputPath, entry.FileName);
+                File.WriteAllBytes(outputFilePath, entry.EntryData);
+            }
+        }
+
+        private static void UnpackRegulationFile(string path, string outputPath)
+        {
+            using (FileStream input = new FileStream(path, FileMode.Open))
+            {
+                RegulationFile encryptedRegulationFile = RegulationFile.ReadRegulationFile(input);
+                DcxFile compressedRegulationFile = DcxFile.Read(new MemoryStream(encryptedRegulationFile.DecryptedData));
+                UnpackBndFile(new MemoryStream(compressedRegulationFile.DecompressedData), outputPath);
             }
         }
 
@@ -330,7 +331,7 @@ namespace BinderTool
             var bdfDirectory = Path.GetDirectoryName(bdfPath);
             // TODO: Add a command line option to specify the bhf file. (Since bhf4 and bdf4 have different hashes)
 
-            var bhf4FilePath = bdfPath.Substring(0, bdfPath.Length - 3) + "bhd"; 
+            var bhf4FilePath = bdfPath.Substring(0, bdfPath.Length - 3) + "bhd";
 
             if (File.Exists(bhf4FilePath) == false)
             {

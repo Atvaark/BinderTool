@@ -1,5 +1,4 @@
-﻿using System;
-using System.IO;
+﻿using System.IO;
 using System.Text;
 using BinderTool.Core.IO;
 
@@ -7,59 +6,55 @@ namespace BinderTool.Core.Regulation
 {
     public class RegulationFile
     {
-        private const string RegulationKeyStr = "40178130DF0A94543309E171ECBF254C";
-        private static byte[] RegulationKey = new byte[16];
-        private static byte[] RegulationIV = new byte[16];
-        private const int RegulationKeyLength = 16;
         private const int RegulationHeaderSize = 32;
 
-        private int EncryptedSize { get; set; }
-        private int DecryptedSize { get; set; }
-        public byte[] EncryptedData { get; private set; }
-        public byte[] DecryptedData
+        private static readonly byte[] RegulationFileKey =
         {
-            get {                
-                Stream stream = new MemoryStream(EncryptedData);
-                return CryptographyUtility.DecryptAesCtrDsII(stream, RegulationKey, RegulationIV).ToArray(); 
-            }
-        }
+            0x40, 0x17, 0x81, 0x30, 0xDF, 0x0A, 0x94, 0x54,
+            0x33, 0x09, 0xE1, 0x71, 0xEC, 0xBF, 0x25, 0x4C
+        };
+
+        private readonly byte[] _iv;
 
         public RegulationFile()
         {
+            _iv = new byte[16];
         }
 
-        private RegulationFile(byte[] encryptedData)
-        {
-            EncryptedData = encryptedData;
-        }
+        public byte[] EncryptedData { get; private set; }
 
-        public static RegulationFile DecryptRegulationFile(Stream inputStream)
+        public byte[] DecryptedData
         {
-            RegulationFile result = new RegulationFile();
-            BigEndianBinaryReader reader = new BigEndianBinaryReader(inputStream, Encoding.UTF8, true);
-
-            for (int i = 0; i < RegulationKeyLength * 2; i += 2)
+            get
             {
-                RegulationKey[i / 2] = Convert.ToByte(RegulationKeyStr.Substring(i, 2), 16);
+                return
+                    CryptographyUtility.DecryptAesCtr(new MemoryStream(EncryptedData), RegulationFileKey, _iv).ToArray();
             }
+        }
 
-            RegulationIV[00] = 0x80;            
+        public static RegulationFile ReadRegulationFile(Stream inputStream)
+        {
+            RegulationFile regulationFile = new RegulationFile();
+            regulationFile.Read(inputStream);
+            return regulationFile;
+        }
+
+        private void Read(Stream input)
+        {
+            BigEndianBinaryReader reader = new BigEndianBinaryReader(input, Encoding.UTF8, true);
+
+            _iv[00] = 0x80;
             for (int i = 1; i <= 11; i++)
             {
-                RegulationIV[i] = reader.ReadByte();
-            }            
-            RegulationIV[12] = 0x00;
-            RegulationIV[13] = 0x00;
-            RegulationIV[14] = 0x00;
-            RegulationIV[15] = 0x01;
+                _iv[i] = reader.ReadByte();
+            }
+            _iv[12] = 0x00;
+            _iv[13] = 0x00;
+            _iv[14] = 0x00;
+            _iv[15] = 0x01;
 
-            result.EncryptedSize = (int)inputStream.Length - RegulationHeaderSize;
-            result.DecryptedSize = result.EncryptedSize;
-
-            reader.Seek(RegulationHeaderSize, SeekOrigin.Begin);
-            result.EncryptedData = reader.ReadBytes(result.EncryptedSize);           
-
-            return result;
+            input.Seek(RegulationHeaderSize, SeekOrigin.Begin);
+            EncryptedData = reader.ReadBytes((int)input.Length - RegulationHeaderSize);
         }
     }
 }

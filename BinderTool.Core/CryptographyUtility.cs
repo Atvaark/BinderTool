@@ -29,11 +29,6 @@ namespace BinderTool.Core
             return DecryptAes(inputStream, cipher);
         }
 
-        public static MemoryStream DecryptAesCtrDsII(Stream inputStream, byte[] key, byte[] iv)
-        {
-            return DecryptAesCtr(inputStream, key, iv);
-        }
-
         public static MemoryStream DecryptAesCtr(Stream inputStream, byte[] key, byte[] iv)
         {
             AesEngine engine = new AesEngine();
