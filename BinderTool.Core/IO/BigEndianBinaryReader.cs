@@ -8,15 +8,15 @@ namespace BinderTool.Core.IO
     {
         private const byte DecimalSignBit = 128;
 
-        public BigEndianBinaryReader(Stream input) : base(input)
+        public BigEndianBinaryReader(Stream inputStream) : base(inputStream)
         {
         }
 
-        public BigEndianBinaryReader(Stream input, Encoding encoding) : base(input, encoding)
+        public BigEndianBinaryReader(Stream inputStream, Encoding encoding) : base(inputStream, encoding)
         {
         }
 
-        public BigEndianBinaryReader(Stream input, Encoding encoding, bool leaveOpen) : base(input, encoding, leaveOpen)
+        public BigEndianBinaryReader(Stream inputStream, Encoding encoding, bool leaveOpen) : base(inputStream, encoding, leaveOpen)
         {
         }
 

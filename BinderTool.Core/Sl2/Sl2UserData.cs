@@ -28,6 +28,7 @@ namespace BinderTool.Core.Sl2
         {
             get
             {
+                // TODO: Check if the first 128bit are a hash
                 return CryptographyUtility.DecryptAesCbc(new MemoryStream(EncryptedUserData), UserDataKey, _iv).ToArray();
             }
         }

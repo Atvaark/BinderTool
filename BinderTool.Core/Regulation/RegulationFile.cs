@@ -39,9 +39,9 @@ namespace BinderTool.Core.Regulation
             return regulationFile;
         }
 
-        private void Read(Stream input)
+        private void Read(Stream inputStream)
         {
-            BigEndianBinaryReader reader = new BigEndianBinaryReader(input, Encoding.UTF8, true);
+            BigEndianBinaryReader reader = new BigEndianBinaryReader(inputStream, Encoding.UTF8, true);
 
             _iv[00] = 0x80;
             for (int i = 1; i <= 11; i++)
@@ -53,8 +53,8 @@ namespace BinderTool.Core.Regulation
             _iv[14] = 0x00;
             _iv[15] = 0x01;
 
-            input.Seek(RegulationHeaderSize, SeekOrigin.Begin);
-            EncryptedData = reader.ReadBytes((int) input.Length - RegulationHeaderSize);
+            inputStream.Seek(RegulationHeaderSize, SeekOrigin.Begin);
+            EncryptedData = reader.ReadBytes((int) inputStream.Length - RegulationHeaderSize);
         }
     }
 }

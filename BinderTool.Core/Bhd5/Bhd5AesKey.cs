@@ -13,6 +13,7 @@ namespace BinderTool.Core.Bhd5
             BinaryReader reader = new BinaryReader(inputStream, Encoding.UTF8, true);
 
             result.Key = reader.ReadBytes(16);
+            // TODO: Check if this is a 128bit hash 
             uint unknown1 = reader.ReadUInt32();
             uint unknown2 = reader.ReadUInt32();
             uint unknown3 = reader.ReadUInt32();

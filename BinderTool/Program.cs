@@ -289,15 +289,15 @@ namespace BinderTool
 
         private static void UnpackBndFile(string path, string outputPath)
         {
-            using (FileStream input = new FileStream(path, FileMode.Open))
+            using (FileStream inputStream = new FileStream(path, FileMode.Open))
             {
-                UnpackBndFile(input, outputPath);
+                UnpackBndFile(inputStream, outputPath);
             }
         }
 
-        private static void UnpackBndFile(Stream input, string outputPath)
+        private static void UnpackBndFile(Stream inputStream, string outputPath)
         {
-            Bnd4File file = Bnd4File.ReadBnd4File(input);
+            Bnd4File file = Bnd4File.ReadBnd4File(inputStream);
 
             foreach (var entry in file.Entries)
             {
@@ -308,9 +308,9 @@ namespace BinderTool
 
         private static void UnpackSl2File(string path, string outputPath)
         {
-            using (FileStream input = new FileStream(path, FileMode.Open))
+            using (FileStream inputStream = new FileStream(path, FileMode.Open))
             {
-                Sl2File sl2File = Sl2File.ReadSl2File(input);
+                Sl2File sl2File = Sl2File.ReadSl2File(inputStream);
                 foreach (var userData in sl2File.UserData)
                 {
                     string outputFilePath = Path.Combine(outputPath, userData.UserDataName);
@@ -321,9 +321,9 @@ namespace BinderTool
 
         private static void UnpackRegulationFile(string path, string outputPath)
         {
-            using (FileStream input = new FileStream(path, FileMode.Open))
+            using (FileStream inputStream = new FileStream(path, FileMode.Open))
             {
-                RegulationFile encryptedRegulationFile = RegulationFile.ReadRegulationFile(input);
+                RegulationFile encryptedRegulationFile = RegulationFile.ReadRegulationFile(inputStream);
                 DcxFile compressedRegulationFile = DcxFile.Read(new MemoryStream(encryptedRegulationFile.DecryptedData));
                 UnpackBndFile(new MemoryStream(compressedRegulationFile.DecompressedData), outputPath);
             }
@@ -335,9 +335,9 @@ namespace BinderTool
             string unpackedFilePath = Path.Combine(outputPath, unpackedFileName);
 
             Directory.CreateDirectory(outputPath);
-            using (FileStream input = new FileStream(dcxPath, FileMode.Open))
+            using (FileStream inputStream = new FileStream(dcxPath, FileMode.Open))
             {
-                DcxFile dcxFile = DcxFile.Read(input);
+                DcxFile dcxFile = DcxFile.Read(inputStream);
                 File.WriteAllBytes(unpackedFilePath, dcxFile.DecompressedData);
             }
         }
@@ -362,12 +362,12 @@ namespace BinderTool
                 }
             }
 
-            using (FileStream bhf4Input = new FileStream(bhf4FilePath, FileMode.Open))
-            using (FileStream bdf4Input = new FileStream(bdfPath, FileMode.Open))
+            using (FileStream bhf4InputStream = new FileStream(bhf4FilePath, FileMode.Open))
+            using (FileStream bdf4InputStream = new FileStream(bdfPath, FileMode.Open))
             {
-                Bhf4File bhf4File = Bhf4File.ReadBhf4File(bhf4Input);
-                Bdf4File bdf4File = Bdf4File.ReadBdf4File(bdf4Input);
-                foreach (var file in bdf4File.ReadData(bdf4Input, bhf4File))
+                Bhf4File bhf4File = Bhf4File.ReadBhf4File(bhf4InputStream);
+                Bdf4File bdf4File = Bdf4File.ReadBdf4File(bdf4InputStream);
+                foreach (var file in bdf4File.ReadData(bdf4InputStream, bhf4File))
                 {
                     ExportFile(file, outputPath);
                 }
