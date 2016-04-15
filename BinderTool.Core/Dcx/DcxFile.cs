@@ -29,11 +29,6 @@ namespace BinderTool.Core.Dcx
         private int UncompressedSize { get; set; }
         public byte[] CompressedData { get; private set; }
 
-        public byte[] DecompressedData
-        {
-            get { return Compression.DecompressData(CompressedData).ToArray(); }
-        }
-
         public static DcxFile Read(Stream inputStream)
         {
             DcxFile result = new DcxFile();
@@ -72,10 +67,9 @@ namespace BinderTool.Core.Dcx
             return result;
         }
 
-        public void Write(Stream outputStream)
+        public byte[] Decompress()
         {
-            BinaryWriter writer = new BinaryWriter(outputStream);
-            throw new NotImplementedException();
+            return Compression.DecompressData(CompressedData).ToArray();
         }
     }
 }

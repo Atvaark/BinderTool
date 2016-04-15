@@ -1,5 +1,6 @@
 ﻿using System;
 using System.IO;
+using System.Text.RegularExpressions;
 
 namespace BinderTool
 {
@@ -25,7 +26,7 @@ namespace BinderTool
                 throw new FormatException("Input file not found");
             }
 
-            options.InputType = GetFileType(options.InputPath);
+            options.InputType = GetFileType(Path.GetFileName(options.InputPath));
 
             if (options.InputType == FileType.Unknown)
             {
@@ -50,43 +51,45 @@ namespace BinderTool
             return options;
         }
 
-        internal static FileType GetFileType(string path)
+        private static FileType GetFileType(string fileName)
         {
-            if (path.EndsWith("enc_regulation.bnd.dcx", StringComparison.InvariantCultureIgnoreCase))
-            {
-                return FileType.Regulation;
-            }
+            if (fileName == null) throw new ArgumentNullException("fileName");
 
-            if (path.EndsWith("dcx", StringComparison.InvariantCultureIgnoreCase))
+            if (fileName.EndsWith("dcx", StringComparison.InvariantCultureIgnoreCase))
             {
                 return FileType.Dcx;
             }
 
-            if (path.EndsWith("Ebl.bdt", StringComparison.InvariantCultureIgnoreCase))
-            {
-                return FileType.EncryptedBdt;
-            }
-
-            if (path.EndsWith("Ebl.bhd"))
-            {
-                return FileType.EncryptedBhd;
-            }
-
-            if (path.EndsWith("bdt", StringComparison.InvariantCultureIgnoreCase))
-            {
-                return FileType.Bdt;
-            }
-
-            if (path.EndsWith("bnd", StringComparison.InvariantCultureIgnoreCase))
+            if (fileName.EndsWith("bnd", StringComparison.InvariantCultureIgnoreCase))
             {
                 return FileType.Bnd;
             }
 
-            if (path.EndsWith("sl2", StringComparison.CurrentCultureIgnoreCase))
+            if (fileName.EndsWith("sl2", StringComparison.CurrentCultureIgnoreCase))
             {
                 return FileType.Savegame;
             }
+            
+            if (fileName == @"Data0.bdt")
+            {
+                return FileType.Regulation;
+            }
 
+            if (Regex.IsMatch(fileName, @"Data\d\.bdt"))
+            {
+                return FileType.EncryptedBdt;
+            }
+
+            if (Regex.IsMatch(fileName, @"Data\d\.bhd"))
+            {
+                return FileType.EncryptedBhd;
+            }
+
+            if (fileName.EndsWith("bdt", StringComparison.InvariantCultureIgnoreCase))
+            {
+                return FileType.Bdt;
+            }
+            
             return FileType.Unknown;
         }
     }

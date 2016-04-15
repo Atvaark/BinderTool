@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Reflection;
 using System.Text;
 using BinderTool.Core;
@@ -11,14 +13,12 @@ using BinderTool.Core.Bhf4;
 using BinderTool.Core.Bnd4;
 using BinderTool.Core.Common;
 using BinderTool.Core.Dcx;
-using BinderTool.Core.Regulation;
 using BinderTool.Core.Sl2;
 
 namespace BinderTool
 {
     public static class Program
     {
-
         private static void Main(string[] args)
         {
             if (args.Length == 0)
@@ -38,7 +38,7 @@ namespace BinderTool
                 ShowUsageInfo();
                 return;
             }
-            
+
             if (options.InputType != FileType.EncryptedBhd)
             {
                 Directory.CreateDirectory(options.OutputPath);
@@ -74,33 +74,14 @@ namespace BinderTool
 
         private static void ShowUsageInfo()
         {
-            Console.WriteLine("BinderTool by Atvaark\n" + "  A tool for unpacking Dark Souls II Ebl.Bdt, Ebl.Bhd, Bdt, Bnd, Dcx and Sl2 files\n" + "Usage:\n" + "  BinderTool file_path [output_path]\n" + "Examples:\n" + "  BinderTool GameDataEbl.bdt GameDataDump");
+            Console.WriteLine("BinderTool by Atvaark\n" + "  A tool for unpacking Dark Souls III Bdt, Bhd, Dcx and Sl2 files\n" + "Usage:\n" + "  BinderTool file_path [output_path]\n" + "Examples:\n" + "  BinderTool data1.bhd data1");
         }
 
         private static List<string> GetArchiveNamesFromFileName(string archiveFileName)
         {
-            // TODO: Find out how the game loads high quality assets
             List<string> archiveNames;
             switch (archiveFileName)
             {
-                case "GameData":
-                    archiveNames = new List<string>
-                    {
-                        "gamedata", "gamedata_patch", "dlc_data", "dlc_menu", "map", "chr", "parts", "eventmaker", "ezstate", "menu", "text", "icon"
-                    };
-                    break;
-                case "HqChr":
-                    archiveNames = new List<string> {"chrhq"};
-                    break;
-                case "HqMap":
-                    archiveNames = new List<string> {"maphq"};
-                    break;
-                case "HqObj":
-                    archiveNames = new List<string> {"objhq"};
-                    break;
-                case "HqParts":
-                    archiveNames = new List<string> {"partshq"};
-                    break;
                 default:
                     archiveNames = new List<string>();
                     break;
@@ -113,21 +94,60 @@ namespace BinderTool
             string dictionaryPath = Path.Combine(Path.GetDirectoryName(Assembly.GetEntryAssembly().Location), "Dictionary.csv");
             FileNameDictionary dictionary = FileNameDictionary.OpenFromFile(dictionaryPath);
 
-            string fileNameWithoutExtension = Path.GetFileName(options.InputPath).Replace("Ebl.bdt", "");
-            string inputFileWithoutExtensionPath = Path.Combine(Path.GetDirectoryName(options.InputPath), fileNameWithoutExtension);
-
-            Bhd5File bhdFile = Bhd5File.Read(DecryptBhdFile(inputFileWithoutExtensionPath));
-            Bdt5FileStream bdtStream = Bdt5FileStream.OpenFile(options.InputPath, FileMode.Open, FileAccess.Read);
+            string fileNameWithoutExtension = Path.GetFileName(options.InputPath).Replace(".bdt", "");
 
             List<string> archiveNames = GetArchiveNamesFromFileName(fileNameWithoutExtension);
+            Bdt5FileStream bdtStream = Bdt5FileStream.OpenFile(options.InputPath, FileMode.Open, FileAccess.Read);
+            
+            MemoryStream bhdStream = DecryptBhdFile(Path.ChangeExtension(options.InputPath, "bhd"));
+            Bhd5File bhdFile = Bhd5File.Read(bhdStream);
+
+            long eof = bdtStream.Length;
+            bhdFile.GetBuckets()
+                .SelectMany(b => b.GetEntries())
+                .OrderByDescending(e => e.FileOffset)
+                .Aggregate(eof, (pos, entry) =>
+                {
+                    long entrySize = pos - entry.FileOffset;
+                    if (entry.FileSize == 0)
+                    {
+                        
+                    }
+                    
+                    if (entrySize != entry.FileSize)
+                    {
+                        long diff = Math.Abs(entrySize - entry.FileSize);
+                        //long offsnew = entry.FileOffset + entrySize;
+                        //Debug.WriteLine("{0}\t{1}\t{2}\t{3}\t{4}", entrySize, entry.FileSize, diff, entry.FileOffset, offsnew);
+
+                        entry.PaddedFileSize = entrySize;
+                        if (diff >= 16)
+                        {
+                            // Fixes entries with length "0", which probably mean "unknown length"
+                            // If the diff is < 16, then it's probably AES encrypted and has padding.
+                            entry.FileSize = entrySize;
+                        }
+                    }
+
+                   return entry.FileOffset;
+                });
+
             foreach (var bucket in bhdFile.GetBuckets())
             {
                 foreach (var entry in bucket.GetEntries())
                 {
-                    MemoryStream data = bdtStream.ReadBhd5Entry(entry);
-                    if (entry.AesKey != null)
+                    MemoryStream data;
+                    if (entry.AesKey == null)
                     {
+                        data = bdtStream.ReadBhd5Entry(entry);
+                    }
+                    else
+                    {
+                        data = bdtStream.ReadBhd5EntryPadded(entry);
                         data = CryptographyUtility.DecryptAesEcb(data, entry.AesKey.Key);
+
+                        // BUG: Breaks decryption if FileSize is not aligned
+                        //data.SetLength(entry.FileSize); 
                     }
 
                     if (data.Length >= 4)
@@ -142,6 +162,7 @@ namespace BinderTool
                             string extension;
                             if (TryGetFileExtension(signature, out extension) == false)
                             {
+                                Debug.WriteLine(signature);
                                 extension = ".bin";
                             }
 
@@ -151,6 +172,10 @@ namespace BinderTool
                         string newFileNamePath = Path.Combine(options.OutputPath, fileName);
                         Directory.CreateDirectory(Path.GetDirectoryName(newFileNamePath));
                         File.WriteAllBytes(newFileNamePath, data.ToArray());
+                    }
+                    else
+                    {
+                        
                     }
                 }
             }
@@ -197,16 +222,37 @@ namespace BinderTool
                 case "NVG2":
                     extension = ".ngp";
                     return true;
+                case "#BOM":
+                    extension = ".txt";
+                    return true;
+                case "\x1BLua":
+                    extension = ".lua";
+                    return true;
+                case "DDS ":
+                    extension = ".dds";
+                    return true;
+                case "RIFF":
+                    extension = ".fev";
+                    return true;
+                case "FSB5":
+                    extension = ".fsb";
+                    return true;
+                case "GFX\v":
+                    extension = ".gfx"; // ?
+                    return true;
+                case "ENFL":
+                    extension = ".enf"; // ?
+                    return true;
+                default:
+                    extension = ".bin";
+                    break;
             }
             return false;
         }
 
         private static void UnpackBhdFile(Options options)
         {
-            string fileNameWithoutExtension = Path.GetFileName(options.InputPath).Replace("Ebl.bhd", "");
-            string inputFileWithoutExtensionPath = Path.Combine(Path.GetDirectoryName(options.InputPath), fileNameWithoutExtension);
-
-            using (var inputStream = DecryptBhdFile(inputFileWithoutExtensionPath))
+            using (var inputStream = DecryptBhdFile(options.InputPath))
             using (var outputStream = File.OpenWrite(options.OutputPath))
             {
                 inputStream.WriteTo(outputStream);
@@ -227,7 +273,9 @@ namespace BinderTool
 
             foreach (var entry in file.Entries)
             {
-                string outputFilePath = Path.Combine(outputPath, entry.FileName);
+                string fileName = FileNameDictionary.NormalizeFileName(entry.FileName);
+                string outputFilePath = Path.Combine(outputPath, fileName);
+                Directory.CreateDirectory(Path.GetDirectoryName(outputFilePath));
                 File.WriteAllBytes(outputFilePath, entry.EntryData);
             }
         }
@@ -247,12 +295,13 @@ namespace BinderTool
 
         private static void UnpackRegulationFile(Options options)
         {
-            using (FileStream inputStream = new FileStream(options.InputPath, FileMode.Open))
-            {
-                RegulationFile encryptedRegulationFile = RegulationFile.ReadRegulationFile(inputStream);
-                DcxFile compressedRegulationFile = DcxFile.Read(new MemoryStream(encryptedRegulationFile.DecryptedData));
-                UnpackBndFile(new MemoryStream(compressedRegulationFile.DecompressedData), options.OutputPath);
-            }
+            throw new NotImplementedException();
+            //using (FileStream inputStream = new FileStream(options.InputPath, FileMode.Open))
+            //{
+            //    RegulationFile encryptedRegulationFile = RegulationFile.ReadRegulationFile(inputStream);
+            //    DcxFile compressedRegulationFile = DcxFile.Read(new MemoryStream(encryptedRegulationFile.DecryptedData));
+            //    UnpackBndFile(new MemoryStream(compressedRegulationFile.d), options.OutputPath);
+            //}
         }
 
         private static void UnpackDcxFile(Options options)
@@ -263,7 +312,8 @@ namespace BinderTool
             using (FileStream inputStream = new FileStream(options.InputPath, FileMode.Open))
             {
                 DcxFile dcxFile = DcxFile.Read(inputStream);
-                File.WriteAllBytes(outputFilePath, dcxFile.DecompressedData);
+                byte[] decompressedData = dcxFile.Decompress();
+                File.WriteAllBytes(outputFilePath, decompressedData);
             }
         }
 
@@ -310,11 +360,11 @@ namespace BinderTool
             }
         }
 
-        private static MemoryStream DecryptBhdFile(string inputFileWithoutExtensionPath)
+        private static MemoryStream DecryptBhdFile(string filePath)
         {
-            var bhdPath = inputFileWithoutExtensionPath + "Ebl.bhd";
-            var pemPath = inputFileWithoutExtensionPath + "KeyCode.pem";
-            return CryptographyUtility.DecryptRsa(bhdPath, pemPath);
+            string fileName = Path.GetFileName(filePath);
+            string key = DecryptionKeys.GetFileKey(fileName);
+            return CryptographyUtility.DecryptRsa(filePath, key);
         }
     }
 }

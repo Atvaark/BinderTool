@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Text;
 
@@ -40,36 +41,46 @@ namespace BinderTool.Core.Bnd4
             int directoryEntrySize = reader.ReadInt32();
             reader.Skip(4);
             int dataOffset = reader.ReadInt32();
-            reader.Skip(20);
-
-            //TODO: Create a new reader object if the text encoding was guessed incorrectly
+            reader.Skip(20); // encoding could also be here as a flag
 
             // Directory section
             for (int i = 0; i < fileCount; i++)
             {
-                int fileEntrySize;
                 int fileEntryOffset;
                 int fileNameOffset;
+
+                int encoding = reader.ReadInt32();
+                reader.Skip(4);
+                int fileEntrySize = reader.ReadInt32();
+                reader.Skip(4);
                 if (directoryEntrySize == 36)
                 {
                     reader.Skip(8);
-                    fileEntrySize = reader.ReadInt32();
-                    reader.Skip(12);
                     fileEntryOffset = reader.ReadInt32();
                     reader.Skip(4);
                     fileNameOffset = reader.ReadInt32();
                 }
                 else
                 {
-                    reader.Skip(8);
-                    fileEntrySize = reader.ReadInt32();
-                    reader.Skip(4);
-
                     fileEntryOffset = reader.ReadInt32();
                     fileNameOffset = reader.ReadInt32();
                 }
 
-
+                // TODO: Check encoding ids are correct. 
+                // DSII (192 = unicode , 64 = ascii?)
+                // DSIII (64 = unicode , 192 = ascii?)
+                switch (encoding)
+                {
+                    case 64:
+                        reader = new BinaryReader(inputStream, Encoding.Unicode, true);
+                        break;
+                    case 192:
+                        break;
+                    default:
+                        Debug.WriteLine("Unknown encoding " + encoding);
+                            break;
+                }
+                
                 long position = reader.Position();
                 string fileName = "";
                 if (fileNameOffset > 0)

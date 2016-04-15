@@ -44,9 +44,19 @@ namespace BinderTool.Core
         private static MemoryStream DecryptAes(Stream inputStream, BufferedBlockCipher cipher)
         {
             byte[] input = new byte[inputStream.Length];
-            byte[] output = new byte[cipher.GetOutputSize((int) inputStream.Length)];
+            byte[] output = new byte[cipher.GetOutputSize((int)inputStream.Length)];
+            // TODO: Check that all input streams are correctly aligned with the block size.
+            ////int blockSize = cipher.GetBlockSize();
+            ////long inputLength = inputStream.Length;
+            ////if (inputLength % blockSize > 0)
+            ////{
+            ////    inputLength += blockSize - inputLength % blockSize;
+            ////}
 
-            inputStream.Read(input, 0, (int) inputStream.Length);
+            ////byte[] input = new byte[inputLength];
+            ////byte[] output = new byte[cipher.GetOutputSize((int)inputLength)];
+
+            inputStream.Read(input, 0, (int)inputStream.Length);
 
             int len = cipher.ProcessBytes(input, 0, input.Length, output, 0);
             cipher.DoFinal(output, len);
@@ -65,20 +75,21 @@ namespace BinderTool.Core
         /// <exception cref="ArgumentNullException">When the argument filePath is null</exception>
         /// <exception cref="ArgumentNullException">When the argument keyPath is null</exception>
         /// <returns>A memory stream with the decrypted file</returns>
-        public static MemoryStream DecryptRsa(string filePath, string keyPath)
+        public static MemoryStream DecryptRsa(string filePath, string key)
         {
             if (filePath == null)
             {
                 throw new ArgumentNullException("filePath");
             }
-            if (keyPath == null)
+
+            if (key == null)
             {
                 throw new ArgumentNullException("keyPath");
             }
 
-            TextReader pemTextReader = File.OpenText(keyPath);
-            PemReader pemReader = new PemReader(pemTextReader);
-            AsymmetricKeyParameter keyParameter = (AsymmetricKeyParameter) pemReader.ReadObject();
+            StringReader keyReader = new StringReader(key);
+            PemReader pemReader = new PemReader(keyReader);
+            AsymmetricKeyParameter keyParameter = (AsymmetricKeyParameter)pemReader.ReadObject();
 
             RsaEngine engine = new RsaEngine();
 
@@ -107,6 +118,19 @@ namespace BinderTool.Core
             }
             outputStream.Seek(0, SeekOrigin.Begin);
             return outputStream;
+        }
+
+        public static AsymmetricKeyParameter GetKeyOrDefault(string key)
+        {
+            try
+            {
+                PemReader pemReader = new PemReader(new StringReader(key));
+                return (AsymmetricKeyParameter)pemReader.ReadObject();
+            }
+            catch
+            {
+                return null;
+            }
         }
     }
 }

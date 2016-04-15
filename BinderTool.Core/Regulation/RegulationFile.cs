@@ -8,10 +8,9 @@ namespace BinderTool.Core.Regulation
     {
         private const int RegulationHeaderSize = 32;
 
+        // TODO: Find out where the regulation key is in DSIII.
         private static readonly byte[] RegulationFileKey =
         {
-            0x40, 0x17, 0x81, 0x30, 0xDF, 0x0A, 0x94, 0x54,
-            0x33, 0x09, 0xE1, 0x71, 0xEC, 0xBF, 0x25, 0x4C
         };
 
         private readonly byte[] _iv;

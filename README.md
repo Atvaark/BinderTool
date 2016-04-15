@@ -1,5 +1,7 @@
 # BinderTool
-A Dark Souls II bdt, bhd, bnd, dcx and sl2 unpacking tool
+A Dark Souls III bdt, bhd, bnd, dcx and sl2 unpacking tool
+
+If you are looking for the Dark Souls II file check out the [v0.3](https://github.com/Atvaark/BinderTool/tree/v0.3) branch.
 
 ## Requirements
 ```
@@ -14,9 +16,9 @@ If no output folder path is specified then the files are unpacked in a folder ca
 
 ## Examples
 
-Unpacking an encrypted bdt file. This requires the corresponding KeyCode.pem and Ebl.bhd files to be in the same folder.
+Unpacking an encrypted bdt file. This requires the corresponding .bhd files to be in the same folder.
 ```
-BinderTool GameDataEbl.bdt
+BinderTool Data1.bdt
 ```
 
 Unpacking an unencrypted bdt file. This requires the corresponding bhd file to be in the same folder.
@@ -26,7 +28,7 @@ BinderTool t10_23_00_00.tpfbdt
 
 Unpacking an encrypted bhd file. This requires the corresponding KeyCode.pem files to be in the same folder.
 ```
-BinderTool GameDataEbl.bhd
+BinderTool Data1.bhd
 ```
 
 Unpacking a bnd file
@@ -41,14 +43,5 @@ BinderTool 01.febnd.dcx
 
 ## Remarks
 
-### Alternative file extensions for bdt files
-Extension        | Content
----------------- | ------------
-gibdt            | Map models
-hkxbdt           | Map models (Havok)
-mapbdt           | Map models
-tpfbdt           | Map textures
-
 ### File names
-The file names in the *Dictionary.csv* are just guesses. They were automatically generated and contain several collisions. When there are multiple file names for a hash the first file name gets picked.
-If a file name can not be found by its hash value, the file extension is guessed and the file is called after the hash and the archive it originates from. Since there are a few file formats (e.g. .param) without a magic number at offset 0 there will be a few .dat files that could contain anything.
+There is  currently no dictionary for Dark Souls III files. Once the hashing algorithm has been figured out the dictionary can be filled again.

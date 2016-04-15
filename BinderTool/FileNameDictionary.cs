@@ -6,36 +6,31 @@ namespace BinderTool
 {
     public class FileNameDictionary
     {
-        private readonly Dictionary<string, Dictionary<uint, List<string>>> _dictionary;
+        private readonly Dictionary<string, Dictionary<ulong, List<string>>> _dictionary;
 
         private FileNameDictionary()
         {
-            _dictionary = new Dictionary<string, Dictionary<uint, List<string>>>();
+            _dictionary = new Dictionary<string, Dictionary<ulong, List<string>>>();
         }
 
-        public bool TryGetFileName(uint hash, string archiveName, out string fileName)
+        public bool TryGetFileName(ulong hash, string archiveName, out string fileName)
         {
             fileName = "";
-            Dictionary<uint, List<string>> archiveDictionary;
+            Dictionary<ulong, List<string>> archiveDictionary;
             if (_dictionary.TryGetValue(archiveName, out archiveDictionary))
             {
                 List<string> fileNames;
                 if (archiveDictionary.TryGetValue(hash, out fileNames))
                 {
-                    // TODO: There should be no hash collisions inside an archive.
-                    //if (fileNames.Count == 1)
-                    //{
-                    //fileName = fileNames.Single().Replace('/', '\\').TrimStart('\\');
                     fileName = fileNames.First().Replace('/', '\\').TrimStart('\\');
                     return true;
-                    //}
                 }
             }
 
             return false;
         }
 
-        public bool TryGetFileName(uint hash, IEnumerable<string> archiveNames, out string fileName)
+        public bool TryGetFileName(ulong hash, IEnumerable<string> archiveNames, out string fileName)
         {
             fileName = "";
             foreach (var archiveName in archiveNames)
@@ -51,12 +46,12 @@ namespace BinderTool
 
         public void Add(string archiveName, string fileName)
         {
-            uint hash = GetHashCode(fileName, 0);
+            ulong hash = GetHashCode(fileName);
 
-            Dictionary<uint, List<string>> archiveDictionary;
+            Dictionary<ulong, List<string>> archiveDictionary;
             if (_dictionary.TryGetValue(archiveName, out archiveDictionary) == false)
             {
-                archiveDictionary = new Dictionary<uint, List<string>>();
+                archiveDictionary = new Dictionary<ulong, List<string>>();
                 _dictionary.Add(archiveName, archiveDictionary);
             }
 
@@ -77,10 +72,6 @@ namespace BinderTool
         {
             var dictionary = new FileNameDictionary();
 
-            // TODO: Find out the names of the high quality files.
-            // e.g. this is pair of texture packs has different name hashes while the latter contains the same textures but in higher quality.
-            // 2500896703   gamedata   /model/chr/c3096.texbnd
-            // 1276904764   chrhq      /???.texbnd
             string[] lines = File.ReadAllLines(dictionaryPath);
             foreach (string line in lines)
             {
@@ -93,13 +84,25 @@ namespace BinderTool
             return dictionary;
         }
 
-        private static uint GetHashCode(string filePath, uint initialHash = 0)
+        private static ulong GetHashCode(string filePath, ulong initialHash = 0)
         {
+            // TODO: Fix 64 bit hash
             if (string.IsNullOrEmpty(filePath))
                 return initialHash;
             return filePath.Replace('\\', '/')
                 .ToLowerInvariant()
                 .Aggregate(initialHash, (i, c) => i * 37 + c);
+        }
+
+        public static string NormalizeFileName(string fileName)
+        {
+            const string virtualRoot = "N:\\FDP\\data\\";
+            if (fileName.StartsWith(virtualRoot))
+            {
+                fileName = fileName.Substring(virtualRoot.Length);
+            }
+
+            return fileName;
         }
     }
 }
