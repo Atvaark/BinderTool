@@ -20,8 +20,8 @@ namespace BinderTool.Core.Bhf4
 
         public void Read(Stream inputStream)
         {
-            BinaryReader reader = new BinaryReader(inputStream, Encoding.Default, true);
-            int unknown1 = reader.ReadInt32(); // Always 64?
+            BinaryReader reader = new BinaryReader(inputStream, Encoding.ASCII, true);
+            int unknown1 = reader.ReadInt32(); // Always 64? Endianess? Encoding?
             uint unknown2 = reader.ReadUInt32(); // Always -1?
             FileSize = reader.ReadInt32();
             int unknown4 = reader.ReadInt32();
@@ -30,13 +30,6 @@ namespace BinderTool.Core.Bhf4
             FileOffset = reader.ReadInt32();
             int unknown8 = reader.ReadInt32();
             FileNameOffset = reader.ReadInt32();
-        }
-
-        public void Write(Stream outputStream)
-        {
-            BinaryWriter writer = new BinaryWriter(outputStream, Encoding.Default, true);
-            // TODO: Implement Bhf4Entry.Write
-            throw new NotImplementedException();
         }
     }
 }

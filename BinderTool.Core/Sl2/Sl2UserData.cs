@@ -35,7 +35,7 @@ namespace BinderTool.Core.Sl2
 
         public void Write(Stream outputStream)
         {
-            BinaryWriter writer = new BinaryWriter(outputStream, Encoding.Default, true);
+            BinaryWriter writer = new BinaryWriter(outputStream, Encoding.ASCII, true);
             // TODO: Implement Sl2UserData.Write
             throw new NotImplementedException();
         }
@@ -50,7 +50,7 @@ namespace BinderTool.Core.Sl2
 
         private void Read(Stream inputStream, int userDataSize)
         {
-            BinaryReader reader = new BinaryReader(inputStream, Encoding.Default, true);
+            BinaryReader reader = new BinaryReader(inputStream, Encoding.ASCII, true);
             reader.Read(_iv, 0, UserDataIvSize);
             EncryptedUserData = reader.ReadBytes(userDataSize - UserDataIvSize);
         }

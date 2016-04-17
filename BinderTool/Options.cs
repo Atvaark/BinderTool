@@ -42,9 +42,13 @@ namespace BinderTool
                 options.OutputPath = Path.Combine(
                     Path.GetDirectoryName(options.InputPath),
                     Path.GetFileNameWithoutExtension(options.InputPath));
-                if (options.InputType == FileType.EncryptedBhd)
+                switch (options.InputType)
                 {
-                    options.OutputPath += "_decrypted.bhd";
+                    case FileType.EncryptedBhd:
+                        options.OutputPath += "_decrypted.bhd";
+                        break;
+                    case FileType.Dcx:
+                        break;
                 }
             }
 
@@ -55,32 +59,45 @@ namespace BinderTool
         {
             if (fileName == null) throw new ArgumentNullException("fileName");
 
+            // file.dcx
+            // file.bnd.dcx
             if (fileName.EndsWith("dcx", StringComparison.InvariantCultureIgnoreCase))
             {
                 return FileType.Dcx;
             }
 
+            // .anibnd
+            // .chrbnd
+            // .chrtpfbhd
+            // .mtdbnd
+            //  .shaderbnd
+            // .objbnd
+            // .partsbnd
+            // .rumblebnd
+            // .hkxbhd
+            // .tpfbhd
             if (fileName.EndsWith("bnd", StringComparison.InvariantCultureIgnoreCase))
             {
                 return FileType.Bnd;
             }
 
+            // DS30000.sl2
             if (fileName.EndsWith("sl2", StringComparison.CurrentCultureIgnoreCase))
             {
                 return FileType.Savegame;
             }
-            
+
             if (fileName == @"Data0.bdt")
             {
                 return FileType.Regulation;
             }
 
-            if (Regex.IsMatch(fileName, @"Data\d\.bdt"))
+            if (Regex.IsMatch(fileName, @"^Data\d\.bdt$", RegexOptions.IgnoreCase))
             {
                 return FileType.EncryptedBdt;
             }
 
-            if (Regex.IsMatch(fileName, @"Data\d\.bhd"))
+            if (Regex.IsMatch(fileName, @"^Data\d\.bhd$", RegexOptions.IgnoreCase))
             {
                 return FileType.EncryptedBhd;
             }
@@ -89,7 +106,12 @@ namespace BinderTool
             {
                 return FileType.Bdt;
             }
-            
+
+            if (fileName.EndsWith("bhd", StringComparison.InvariantCultureIgnoreCase))
+            {
+                return FileType.Bhd;
+            }
+
             return FileType.Unknown;
         }
     }

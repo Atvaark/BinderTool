@@ -22,7 +22,7 @@ namespace BinderTool
                 List<string> fileNames;
                 if (archiveDictionary.TryGetValue(hash, out fileNames))
                 {
-                    fileName = fileNames.First().Replace('/', '\\').TrimStart('\\');
+                    fileName = NormalizeFileName(fileNames.First());
                     return true;
                 }
             }
@@ -84,14 +84,13 @@ namespace BinderTool
             return dictionary;
         }
 
-        private static ulong GetHashCode(string filePath, ulong initialHash = 0)
+        private static uint GetHashCode(string filePath, uint initialHash = 0)
         {
-            // TODO: Fix 64 bit hash
             if (string.IsNullOrEmpty(filePath))
                 return initialHash;
             return filePath.Replace('\\', '/')
                 .ToLowerInvariant()
-                .Aggregate(initialHash, (i, c) => i * 37 + c);
+                .Aggregate(initialHash, (i, c) => i * 137 + c);
         }
 
         public static string NormalizeFileName(string fileName)
@@ -102,7 +101,7 @@ namespace BinderTool
                 fileName = fileName.Substring(virtualRoot.Length);
             }
 
-            return fileName;
+            return fileName.Replace('/', '\\').TrimStart('\\');
         }
     }
 }

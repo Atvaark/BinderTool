@@ -8,6 +8,7 @@
         EncryptedBdt,
         EncryptedBhd,
         Bdt,
+        Bhd,
         Bnd,
         Savegame
     }

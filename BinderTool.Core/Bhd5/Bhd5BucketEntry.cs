@@ -5,7 +5,8 @@ namespace BinderTool.Core.Bhd5
 {
     public class Bhd5BucketEntry
     {
-        public ulong FileNameHash { get; private set; }
+        public uint FileNameHash { get; private set; }
+        public uint FileNameHashUnknown { get; private set; }
         public long FileSize { get; set; }
         public long? PaddedFileSize { get; set; }
         public long FileOffset { get; private set; }
@@ -16,7 +17,8 @@ namespace BinderTool.Core.Bhd5
         {
             Bhd5BucketEntry result = new Bhd5BucketEntry();
             BinaryReader reader = new BinaryReader(inputStream, Encoding.UTF8, true);
-            result.FileNameHash = reader.ReadUInt64();
+            result.FileNameHash = reader.ReadUInt32();
+            result.FileNameHashUnknown = reader.ReadUInt32();
             result.FileOffset = reader.ReadInt64();
             long saltedHashOffset = reader.ReadInt64();
             long aesKeyOffset = reader.ReadInt64();
@@ -45,5 +47,6 @@ namespace BinderTool.Core.Bhd5
 
             return result;
         }
+
     }
 }

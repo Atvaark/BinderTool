@@ -28,10 +28,9 @@ namespace BinderTool.Core.Dcx
             return outputStream;
         }
 
-        public static DeflateCompression Read(Stream inputStream)
+        public static DeflateCompression Read(BinaryReader reader)
         {
             DeflateCompression result = new DeflateCompression();
-            BinaryReader reader = new BinaryReader(inputStream, Encoding.Default, true);
             int headerSize = reader.ReadInt32();
             result.Level = reader.ReadInt32();
             reader.Skip(16);

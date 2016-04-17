@@ -20,7 +20,7 @@ namespace BinderTool.Core.Bdf4
 
         public void Read(Stream inputStream)
         {
-            BinaryReader reader = new BinaryReader(inputStream, Encoding.Default, true);
+            BinaryReader reader = new BinaryReader(inputStream, Encoding.ASCII, true);
             string signature = reader.ReadString(4); // BDF4
             int unknown1 = reader.ReadInt32(); // Always 00 00 00 00?
             int unknown2 = reader.ReadInt32(); // Always 00 00 01 00?

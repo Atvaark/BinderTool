@@ -19,7 +19,12 @@ namespace BinderTool
 {
     public static class Program
     {
-        private static void Main(string[] args)
+        public static void Main(string[] args)
+        {
+            Run(args);
+        }
+
+        private static void Run(string[] args)
         {
             if (args.Length == 0)
             {
@@ -39,16 +44,21 @@ namespace BinderTool
                 return;
             }
 
-            if (options.InputType != FileType.EncryptedBhd)
+            switch (options.InputType)
             {
-                Directory.CreateDirectory(options.OutputPath);
+                // These files have a single output file. 
+                case FileType.EncryptedBhd:
+                case FileType.Dcx:
+                    break;
+                default:
+                    Directory.CreateDirectory(options.OutputPath);
+                    break;
             }
 
             switch (options.InputType)
             {
                 case FileType.Regulation:
-                    UnpackRegulationFile(options);
-                    break;
+                    throw new NotImplementedException();
                 case FileType.Dcx:
                     UnpackDcxFile(options);
                     break;
@@ -61,6 +71,8 @@ namespace BinderTool
                 case FileType.Bdt:
                     UnpackBdf4File(options);
                     break;
+                case FileType.Bhd:
+                    throw new NotImplementedException();
                 case FileType.Bnd:
                     UnpackBndFile(options);
                     break;
@@ -68,13 +80,19 @@ namespace BinderTool
                     UnpackSl2File(options);
                     break;
                 default:
-                    throw new ArgumentOutOfRangeException();
+                    throw new ArgumentOutOfRangeException(string.Format("Unable to handle type '{0}'", options.InputType));
             }
         }
 
         private static void ShowUsageInfo()
         {
-            Console.WriteLine("BinderTool by Atvaark\n" + "  A tool for unpacking Dark Souls III Bdt, Bhd, Dcx and Sl2 files\n" + "Usage:\n" + "  BinderTool file_path [output_path]\n" + "Examples:\n" + "  BinderTool data1.bhd data1");
+            Console.WriteLine(
+                "BinderTool by Atvaark\n" +
+                "  A tool for unpacking Dark Souls III Bdt, Bhd, Dcx and Sl2 files\n" +
+                "Usage:\n" +
+                "  BinderTool file_path [output_path]\n" +
+                "Examples:\n" +
+                "  BinderTool data1.bhd data1");
         }
 
         private static List<string> GetArchiveNamesFromFileName(string archiveFileName)
@@ -83,7 +101,46 @@ namespace BinderTool
             switch (archiveFileName)
             {
                 default:
-                    archiveNames = new List<string>();
+                    archiveNames = new List<string>()
+                    {   
+                        "action",
+                        "adhoc",
+                        "aiscript",
+                        "capture",
+                        "cap_dbgsaveload",
+                        "cap_debugmenu",
+                        "chr",
+                        "chranibnd",
+                        "chresd",
+                        "chresdpatch",
+                        "config",
+                        "dbgai",
+                        "debug",
+                        "event",
+                        "facegen",
+                        "font",
+                        "map",
+                        "menu",
+                        "msg",
+                        "mtd",
+                        "obj",
+                        "other",
+                        "param",
+                        "paramdef",
+                        "parampatch",
+                        "parts",
+                        "patch_sfxbnd",
+                        "regulation",
+                        "script",
+                        "sfx",
+                        "sfxbnd",
+                        "shader",
+                        "stayparamdef",
+                        "system",
+                        "temp",
+                        "testdata",
+                        "title"
+                    };
                     break;
             }
             return archiveNames;
@@ -98,7 +155,7 @@ namespace BinderTool
 
             List<string> archiveNames = GetArchiveNamesFromFileName(fileNameWithoutExtension);
             Bdt5FileStream bdtStream = Bdt5FileStream.OpenFile(options.InputPath, FileMode.Open, FileAccess.Read);
-            
+
             MemoryStream bhdStream = DecryptBhdFile(Path.ChangeExtension(options.InputPath, "bhd"));
             Bhd5File bhdFile = Bhd5File.Read(bhdStream);
 
@@ -111,25 +168,26 @@ namespace BinderTool
                     long entrySize = pos - entry.FileOffset;
                     if (entry.FileSize == 0)
                     {
-                        
+                        //Debug.WriteLine("{0}\t0 size", entry.FileOffset);
                     }
-                    
+
                     if (entrySize != entry.FileSize)
                     {
                         long diff = Math.Abs(entrySize - entry.FileSize);
                         //long offsnew = entry.FileOffset + entrySize;
-                        //Debug.WriteLine("{0}\t{1}\t{2}\t{3}\t{4}", entrySize, entry.FileSize, diff, entry.FileOffset, offsnew);
+                        //Debug.WriteLine("{0}\t{1}\t{2}\t{3}\t{4}", entry.FileOffset, offsnew, entrySize, entry.FileSize, diff);
 
                         entry.PaddedFileSize = entrySize;
-                        if (diff >= 16)
+                        if (entry.AesKey != null && diff >= 16)
                         {
                             // Fixes entries with length "0", which probably mean "unknown length"
                             // If the diff is < 16, then it's probably AES encrypted and has padding.
-                            entry.FileSize = entrySize;
+                            // TODO: Do this late and only if the file size can't get read. 
+                            //entry.FileSize = entrySize;
                         }
                     }
 
-                   return entry.FileOffset;
+                    return entry.FileOffset;
                 });
 
             foreach (var bucket in bhdFile.GetBuckets())
@@ -137,48 +195,107 @@ namespace BinderTool
                 foreach (var entry in bucket.GetEntries())
                 {
                     MemoryStream data;
-                    if (entry.AesKey == null)
-                    {
-                        data = bdtStream.ReadBhd5Entry(entry);
-                    }
-                    else
-                    {
-                        data = bdtStream.ReadBhd5EntryPadded(entry);
-                        data = CryptographyUtility.DecryptAesEcb(data, entry.AesKey.Key);
+                    bool encrypted = entry.AesKey != null;
 
-                        // BUG: Breaks decryption if FileSize is not aligned
-                        //data.SetLength(entry.FileSize); 
-                    }
-
-                    if (data.Length >= 4)
+                    if (entry.FileSize == 0)
                     {
-                        BinaryReader reader = new BinaryReader(data, Encoding.ASCII, true);
-                        string signature = new string(reader.ReadChars(4));
-                        data.Position = 0;
+                        const int sampleLength = 48;
+                        data = bdtStream.Read(entry.FileOffset, sampleLength);
 
-                        string fileName;
-                        if (!dictionary.TryGetFileName(entry.FileNameHash, archiveNames, out fileName))
+                        if (encrypted)
                         {
-                            string extension;
-                            if (TryGetFileExtension(signature, out extension) == false)
-                            {
-                                Debug.WriteLine(signature);
-                                extension = ".bin";
-                            }
-
-                            fileName = string.Format("{0:D10}_{1}{2}", entry.FileNameHash, fileNameWithoutExtension, extension);
+                            data = CryptographyUtility.DecryptAesEcb(data, entry.AesKey.Key);
                         }
 
-                        string newFileNamePath = Path.Combine(options.OutputPath, fileName);
-                        Directory.CreateDirectory(Path.GetDirectoryName(newFileNamePath));
-                        File.WriteAllBytes(newFileNamePath, data.ToArray());
+                        string sampleSignature;
+                        if (!TryGetSignature(data, out sampleSignature)
+                            || sampleSignature != DcxFile.DcxSignature)
+                        {
+                            Console.WriteLine("Unable to determine the length of file '{0:D10}'", entry.FileNameHash);
+                            continue;
+                        }
+
+                        entry.FileSize = DcxFile.DcxSize + DcxFile.ReadCompressedSize(data);
+                    }
+
+                    if (encrypted)
+                    {
+                        data = bdtStream.Read(entry.FileOffset, entry.PaddedFileSize ?? entry.FileSize);
+                        // BUG: DCX files are encrypted one more time (offset 78)
+                        // BUG: BHF4 files are encrypted one more time (offset 1024)
+                        data = CryptographyUtility.DecryptAesEcb(data, entry.AesKey.Key);
+                        data.SetLength(entry.FileSize);
                     }
                     else
                     {
-                        
+                        data = bdtStream.Read(entry.FileOffset, entry.FileSize);
                     }
+
+                    string fileName;
+                    string extension;
+                    if (!dictionary.TryGetFileName(entry.FileNameHash, archiveNames, out fileName))
+                    {
+                        extension = GetDataExtension(data);
+                        fileName = string.Format(
+                            "{0:D10}_{1}{2}",
+                            entry.FileNameHash,
+                            fileNameWithoutExtension,
+                            extension);
+                    }
+                    else
+                    {
+                        extension = Path.GetExtension(fileName);
+                    }
+
+                    Debug.WriteLine(
+                        "{0}\t{1}\t{2}\t{3}\t{4}\t{5}\t{6}\t{7}\t{8}",
+                        fileNameWithoutExtension,
+                        fileName,
+                        extension,
+                        entry.FileNameHash,
+                        entry.FileNameHashUnknown,
+                        entry.FileOffset,
+                        entry.FileSize,
+                        entry.PaddedFileSize,
+                        encrypted);
+
+                    string newFileNamePath = Path.Combine(options.OutputPath, fileName);
+                    Directory.CreateDirectory(Path.GetDirectoryName(newFileNamePath));
+                    File.WriteAllBytes(newFileNamePath, data.ToArray());
                 }
             }
+        }
+
+        private static string GetDataExtension(MemoryStream data)
+        {
+            string signature;
+            string extension;
+            if (!TryGetSignature(data, out signature)
+                || !TryGetFileExtension(signature, out extension))
+            {
+                
+                Debug.WriteLine(
+                    string.Format("Unknown signature: '{0}'",
+                    BitConverter.ToString(Encoding.ASCII.GetBytes(signature)).Replace("-", " ")));
+                return ".bin";
+            }
+
+            return extension;
+        }
+
+        private static bool TryGetSignature(MemoryStream stream, out string signature)
+        {
+            signature = null;
+            if (stream.Length < 4)
+            {
+                return false;
+            }
+
+            BinaryReader reader = new BinaryReader(stream, Encoding.ASCII, true);
+            signature = new string(reader.ReadChars(4));
+            stream.Position = 0;
+
+            return true;
         }
 
         private static bool TryGetFileExtension(string signature, out string extension)
@@ -238,7 +355,7 @@ namespace BinderTool
                     extension = ".fsb";
                     return true;
                 case "GFX\v":
-                    extension = ".gfx"; // ?
+                    extension = ".gfx";
                     return true;
                 case "ENFL":
                     extension = ".enf"; // ?
@@ -295,7 +412,6 @@ namespace BinderTool
 
         private static void UnpackRegulationFile(Options options)
         {
-            throw new NotImplementedException();
             //using (FileStream inputStream = new FileStream(options.InputPath, FileMode.Open))
             //{
             //    RegulationFile encryptedRegulationFile = RegulationFile.ReadRegulationFile(inputStream);
@@ -307,12 +423,23 @@ namespace BinderTool
         private static void UnpackDcxFile(Options options)
         {
             string unpackedFileName = Path.GetFileNameWithoutExtension(options.InputPath);
-            string outputFilePath = Path.Combine(options.OutputPath, unpackedFileName);
+            string outputFilePath = options.OutputPath;
+            bool hasExtension = Path.GetExtension(unpackedFileName) != "";
 
             using (FileStream inputStream = new FileStream(options.InputPath, FileMode.Open))
             {
                 DcxFile dcxFile = DcxFile.Read(inputStream);
                 byte[] decompressedData = dcxFile.Decompress();
+
+                if (!hasExtension)
+                {
+                    string extension = GetDataExtension(new MemoryStream(decompressedData));
+                    if (extension != ".dcx")
+                    {
+                        outputFilePath += extension;
+                    }
+                }
+
                 File.WriteAllBytes(outputFilePath, decompressedData);
             }
         }
@@ -320,8 +447,6 @@ namespace BinderTool
         private static void UnpackBdf4File(Options options)
         {
             var bdfDirectory = Path.GetDirectoryName(options.InputPath);
-            // TODO: Add a command line option to specify the bhf file. (Since bhf4 and bdf4 have different hashes)
-
             var bhf4FilePath = options.InputPath.Substring(0, options.InputPath.Length - 3) + "bhd";
 
             if (File.Exists(bhf4FilePath) == false)
@@ -332,7 +457,7 @@ namespace BinderTool
                 if (uint.TryParse(split[0], out hash))
                 {
                     hash += 132;
-                    split[0] = hash.ToString();
+                    split[0] = hash.ToString("D10");
                     bhf4FilePath = Path.Combine(bdfDirectory, String.Join("_", split) + ".bhd");
                 }
             }

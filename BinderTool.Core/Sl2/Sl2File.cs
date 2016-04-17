@@ -70,7 +70,7 @@ namespace BinderTool.Core.Sl2
 
         public void Write(Stream outputStream)
         {
-            BinaryWriter writer = new BinaryWriter(outputStream, Encoding.Default, true);
+            BinaryWriter writer = new BinaryWriter(outputStream, Encoding.ASCII, true);
             // TODO: Implement Sl2File.Write
             throw new NotImplementedException();
         }

@@ -16,18 +16,8 @@ namespace BinderTool.Core.Bdt5
         {
             get { return _inputStream.Length; }
         }
-
-        public MemoryStream ReadBhd5Entry(Bhd5BucketEntry entry)
-        {
-            return ReadInner(entry.FileOffset, entry.FileSize);
-        }
-
-        public MemoryStream ReadBhd5EntryPadded(Bhd5BucketEntry entry)
-        {
-            return ReadInner(entry.FileOffset, entry.PaddedFileSize ?? entry.FileSize);
-        }
-
-        private MemoryStream ReadInner(long fileOffset, long fileSize)
+        
+        public MemoryStream Read(long fileOffset, long fileSize)
         {
             if (fileOffset + fileSize > _inputStream.Length)
                 throw new EndOfStreamException();
