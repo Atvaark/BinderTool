@@ -26,7 +26,7 @@ namespace BinderTool.Core
             return builder.ToString();
         }
 
-        internal static long Position(this BinaryReader reader)
+        internal static long GetPosition(this BinaryReader reader)
         {
             return reader.BaseStream.Position;
         }

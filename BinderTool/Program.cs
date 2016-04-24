@@ -158,69 +158,27 @@ namespace BinderTool
 
             MemoryStream bhdStream = DecryptBhdFile(Path.ChangeExtension(options.InputPath, "bhd"));
             Bhd5File bhdFile = Bhd5File.Read(bhdStream);
-
-            long eof = bdtStream.Length;
-            bhdFile.GetBuckets()
-                .SelectMany(b => b.GetEntries())
-                .OrderByDescending(e => e.FileOffset)
-                .Aggregate(eof, (pos, entry) =>
-                {
-                    long entrySize = pos - entry.FileOffset;
-                    if (entry.FileSize == 0)
-                    {
-                        //Debug.WriteLine("{0}\t0 size", entry.FileOffset);
-                    }
-
-                    if (entrySize != entry.FileSize)
-                    {
-                        long diff = Math.Abs(entrySize - entry.FileSize);
-                        //long offsnew = entry.FileOffset + entrySize;
-                        //Debug.WriteLine("{0}\t{1}\t{2}\t{3}\t{4}", entry.FileOffset, offsnew, entrySize, entry.FileSize, diff);
-
-                        entry.PaddedFileSize = entrySize;
-                        if (entry.AesKey != null && diff >= 16)
-                        {
-                            // Fixes entries with length "0", which probably mean "unknown length"
-                            // If the diff is < 16, then it's probably AES encrypted and has padding.
-                            // TODO: Do this late and only if the file size can't get read. 
-                            //entry.FileSize = entrySize;
-                        }
-                    }
-
-                    return entry.FileOffset;
-                });
-
+            
             foreach (var bucket in bhdFile.GetBuckets())
             {
                 foreach (var entry in bucket.GetEntries())
                 {
                     MemoryStream data;
-                    bool encrypted = entry.AesKey != null;
-
                     if (entry.FileSize == 0)
                     {
-                        const int sampleLength = 48;
-                        data = bdtStream.Read(entry.FileOffset, sampleLength);
-
-                        if (encrypted)
-                        {
-                            data = CryptographyUtility.DecryptAesEcb(data, entry.AesKey.Key);
-                        }
-
-                        string sampleSignature;
-                        if (!TryGetSignature(data, out sampleSignature)
-                            || sampleSignature != DcxFile.DcxSignature)
+                        long fileSize;
+                        if (!TryReadFileSize(entry, bdtStream, out fileSize))
                         {
                             Console.WriteLine("Unable to determine the length of file '{0:D10}'", entry.FileNameHash);
                             continue;
                         }
 
-                        entry.FileSize = DcxFile.DcxSize + DcxFile.ReadCompressedSize(data);
+                        entry.FileSize = fileSize;
                     }
 
-                    if (encrypted)
+                    if (entry.IsEncrypted)
                     {
-                        data = bdtStream.Read(entry.FileOffset, entry.PaddedFileSize ?? entry.FileSize);
+                        data = bdtStream.Read(entry.FileOffset, entry.PaddedFileSize);
                         // BUG: DCX files are encrypted one more time (offset 78)
                         // BUG: BHF4 files are encrypted one more time (offset 1024)
                         data = CryptographyUtility.DecryptAesEcb(data, entry.AesKey.Key);
@@ -257,13 +215,36 @@ namespace BinderTool
                         entry.FileOffset,
                         entry.FileSize,
                         entry.PaddedFileSize,
-                        encrypted);
+                        entry.IsEncrypted);
 
                     string newFileNamePath = Path.Combine(options.OutputPath, fileName);
                     Directory.CreateDirectory(Path.GetDirectoryName(newFileNamePath));
                     File.WriteAllBytes(newFileNamePath, data.ToArray());
                 }
             }
+        }
+
+        private static bool TryReadFileSize(Bhd5BucketEntry entry, Bdt5FileStream bdtStream, out long fileSize)
+        {
+            fileSize = 0;
+
+            const int sampleLength = 48;
+            MemoryStream data = bdtStream.Read(entry.FileOffset, sampleLength);
+
+            if (entry.IsEncrypted)
+            {
+                data = CryptographyUtility.DecryptAesEcb(data, entry.AesKey.Key);
+            }
+
+            string sampleSignature;
+            if (!TryGetSignature(data, out sampleSignature)
+                || sampleSignature != DcxFile.DcxSignature)
+            {
+                return false;
+            }
+
+            fileSize = DcxFile.DcxSize + DcxFile.ReadCompressedSize(data);
+            return true;
         }
 
         private static string GetDataExtension(MemoryStream data)
@@ -273,7 +254,7 @@ namespace BinderTool
             if (!TryGetSignature(data, out signature)
                 || !TryGetFileExtension(signature, out extension))
             {
-                
+
                 Debug.WriteLine(
                     string.Format("Unknown signature: '{0}'",
                     BitConverter.ToString(Encoding.ASCII.GetBytes(signature)).Replace("-", " ")));

@@ -55,7 +55,7 @@ namespace BinderTool.Core.Sl2
                 reader.Skip(8);
 
 
-                long position = reader.Position();
+                long position = reader.GetPosition();
                 string fileName = "";
                 if (userDataNameOffset > 0)
                 {

@@ -19,22 +19,22 @@ namespace BinderTool.Core.Bhd5
             return _entries.AsEnumerable();
         }
 
-        public static Bhd5Bucket Read(Stream inputStream)
+        public static Bhd5Bucket Read(BinaryReader reader)
         {
             Bhd5Bucket result = new Bhd5Bucket();
-            BinaryReader reader = new BinaryReader(inputStream, Encoding.UTF8, true);
 
             int bucketEntryCount = reader.ReadInt32();
             int bucketOffset = reader.ReadInt32();
 
-            long currentPosition = inputStream.Position;
-            inputStream.Seek(bucketOffset, SeekOrigin.Begin);
+            long currentPosition = reader.GetPosition();
+            reader.Seek(bucketOffset, SeekOrigin.Begin);
 
             for (int i = 0; i < bucketEntryCount; i++)
             {
-                result._entries.Add(Bhd5BucketEntry.Read(inputStream));
+                result._entries.Add(Bhd5BucketEntry.Read(reader));
             }
-            inputStream.Seek(currentPosition, SeekOrigin.Begin);
+
+            reader.Seek(currentPosition, SeekOrigin.Begin);
             return result;
         }
     }

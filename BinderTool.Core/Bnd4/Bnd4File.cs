@@ -81,7 +81,7 @@ namespace BinderTool.Core.Bnd4
                             break;
                 }
                 
-                long position = reader.Position();
+                long position = reader.GetPosition();
                 string fileName = "";
                 if (fileNameOffset > 0)
                 {

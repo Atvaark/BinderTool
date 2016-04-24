@@ -21,12 +21,14 @@ namespace BinderTool.Core.Bhd5
         {
             Bhd5File result = new Bhd5File();
 
-            BinaryReader reader = new BinaryReader(inputStream, Encoding.UTF8, true);
+            BinaryReader reader = new BinaryReader(inputStream, Encoding.ASCII, true);
 
             string signature = new string(reader.ReadChars(4));
             if (signature != Bhd5Signature)
                 throw new Bhd5FileReadException("Invalid signature");
-            reader.Skip(12);
+            int version = reader.ReadInt32(); // 511
+            int unknown = reader.ReadInt32(); // 1
+            int size = reader.ReadInt32(); // excluding sizeof(signature)
             int bucketDirectoryEntryCount = reader.ReadInt32();
             int bucketDirectoryOffset = reader.ReadInt32();
             int saltLength = reader.ReadInt32();
@@ -34,9 +36,8 @@ namespace BinderTool.Core.Bhd5
 
             for (int i = 0; i < bucketDirectoryEntryCount; i++)
             {
-                result._buckets.Add(Bhd5Bucket.Read(inputStream));
+                result._buckets.Add(Bhd5Bucket.Read(reader));
             }
-
 
             return result;
         }
