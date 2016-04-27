@@ -22,16 +22,10 @@ namespace BinderTool.Core.Sl2
         }
 
         public string UserDataName { get; set; }
+
         public byte[] EncryptedUserData { get; private set; }
 
-        public byte[] DecryptedUserData
-        {
-            get
-            {
-                // TODO: Check if the first 128bit are a hash
-                return CryptographyUtility.DecryptAesCbc(new MemoryStream(EncryptedUserData), UserDataKey, _iv).ToArray();
-            }
-        }
+        public byte[] DecryptedUserData => CryptographyUtility.DecryptAesCbc(new MemoryStream(EncryptedUserData), UserDataKey, _iv).ToArray();
 
         public void Write(Stream outputStream)
         {

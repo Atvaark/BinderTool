@@ -1,5 +1,4 @@
 ﻿using System.IO;
-using System.Text;
 using ICSharpCode.SharpZipLib.Zip.Compression.Streams;
 
 namespace BinderTool.Core.Dcx

@@ -1,6 +1,5 @@
 using System;
 using System.IO;
-using System.Security.Cryptography;
 using System.Text;
 using BinderTool.Core.IO;
 
@@ -64,8 +63,9 @@ namespace BinderTool.Core.Dcx
             signature = reader.ReadString(4);
             if (signature != DcsSignature)
                 throw new Exception("Signature was not DCS");
-            this.UncompressedSize = reader.ReadInt32();
-            this.CompressedSize = reader.ReadInt32();
+
+            UncompressedSize = reader.ReadInt32();
+            CompressedSize = reader.ReadInt32();
         }
 
         private void ReadCompressionHeader(BinaryReader reader)
@@ -75,8 +75,9 @@ namespace BinderTool.Core.Dcx
                 throw new Exception("Signature was not DCP");
             signature = reader.ReadString(4);
             if (signature != DeflateCompression.DeflateSignature)
-                throw new NotImplementedException(String.Format("Compression not implemented ({0}) ", signature));
-            this.Compression = DeflateCompression.Read(reader);
+                throw new NotImplementedException($"Compression not implemented ({signature}) ");
+
+            Compression = DeflateCompression.Read(reader);
 
             signature = reader.ReadString(4);
             if (signature != DcaSignature)

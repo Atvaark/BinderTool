@@ -1,5 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.IO;
 using System.Text;
 using BinderTool.Core.IO;
@@ -94,9 +93,7 @@ namespace BinderTool.Core.Bhf4
             foreach (var entry in Entries)
             {
                 inputStream.Position = entry.FileNameOffset;
-                entry.FileName = entry.FileNameOffset.ToString();
-                // TODO: Read the string again, when the remaining BHF4 is decrypted correctly
-                //entry.FileName = reader.ReadNullTerminatedString();
+                entry.FileName = reader.ReadNullTerminatedString();
             }
 
             inputStream.Position = endPosition;

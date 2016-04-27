@@ -57,7 +57,7 @@ namespace BinderTool
 
         private static FileType GetFileType(string fileName)
         {
-            if (fileName == null) throw new ArgumentNullException("fileName");
+            if (fileName == null) throw new ArgumentNullException(nameof(fileName));
 
             // file.dcx
             // file.bnd.dcx

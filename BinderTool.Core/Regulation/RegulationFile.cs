@@ -22,14 +22,7 @@ namespace BinderTool.Core.Regulation
 
         public byte[] EncryptedData { get; private set; }
 
-        public byte[] DecryptedData
-        {
-            get
-            {
-                return
-                    CryptographyUtility.DecryptAesCtr(new MemoryStream(EncryptedData), RegulationFileKey, _iv).ToArray();
-            }
-        }
+        public byte[] DecryptedData => CryptographyUtility.DecryptAesCtr(new MemoryStream(EncryptedData), RegulationFileKey, _iv).ToArray();
 
         public static RegulationFile ReadRegulationFile(Stream inputStream)
         {

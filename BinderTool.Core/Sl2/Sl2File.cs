@@ -15,10 +15,7 @@ namespace BinderTool.Core.Sl2
             _userData = new List<Sl2UserData>();
         }
 
-        public List<Sl2UserData> UserData
-        {
-            get { return _userData; }
-        }
+        public List<Sl2UserData> UserData => _userData;
 
         public static Sl2File ReadSl2File(Stream inputStream)
         {

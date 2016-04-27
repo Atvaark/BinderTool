@@ -1,5 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.IO;
 using System.Text;
 using BinderTool.Core.Bhf4;
@@ -29,14 +28,7 @@ namespace BinderTool.Core.Bdf4
             int unknown5 = reader.ReadInt32();
             Version = reader.ReadString(8);
         }
-
-        public void Write(Stream ouputStream)
-        {
-            BinaryWriter writer = new BinaryWriter(ouputStream, Encoding.Default, true);
-            // TODO: Implement Bdf4File.Write
-            throw new NotImplementedException();
-        }
-
+        
         public IEnumerable<DataContainer> ReadData(Stream inputStream, Bhf4File bhf4File)
         {
             foreach (var entry in bhf4File.Entries)

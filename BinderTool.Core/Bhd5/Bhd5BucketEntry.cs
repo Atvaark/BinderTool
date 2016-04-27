@@ -1,5 +1,4 @@
 ﻿using System.IO;
-using System.Text;
 
 namespace BinderTool.Core.Bhd5
 {
@@ -12,10 +11,7 @@ namespace BinderTool.Core.Bhd5
         public long FileOffset { get; private set; }
         public Bhd5AesKey AesKey { get; private set; }
         public Bhd5SaltedShaHash ShaHash { get; private set; }
-        public bool IsEncrypted
-        {
-            get { return AesKey != null; }
-        }
+        public bool IsEncrypted => AesKey != null;
 
         public static Bhd5BucketEntry Read(BinaryReader reader)
         {

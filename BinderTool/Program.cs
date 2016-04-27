@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
-using System.Linq;
 using System.Reflection;
 using System.Text;
 using BinderTool.Core;
@@ -19,12 +18,7 @@ namespace BinderTool
 {
     public static class Program
     {
-        public static void Main(string[] args)
-        {
-            Run(args);
-        }
-
-        private static void Run(string[] args)
+        private static void Main(string[] args)
         {
             if (args.Length == 0)
             {
@@ -80,7 +74,7 @@ namespace BinderTool
                     UnpackSl2File(options);
                     break;
                 default:
-                    throw new ArgumentOutOfRangeException(string.Format("Unable to handle type '{0}'", options.InputType));
+                    throw new ArgumentOutOfRangeException($"Unable to handle type '{options.InputType}'");
             }
         }
 
@@ -179,26 +173,29 @@ namespace BinderTool
                     if (entry.IsEncrypted)
                     {
                         data = bdtStream.Read(entry.FileOffset, entry.PaddedFileSize);
+
+                        CryptographyUtility.DecryptAesEcb(data, entry.AesKey.Key, entry.AesKey.Ranges);
+                        //data = CryptographyUtility.DecryptAesEcb(data, entry.AesKey.Key);
+
+                        data.Position = 0;
+                        data.SetLength(entry.FileSize);
+
                         // BUG: DCX files are encrypted one more time (offset 78)
                         // BUG: BHF4 files are encrypted one more time (offset 1024)
-                        data = CryptographyUtility.DecryptAesEcb(data, entry.AesKey.Key);
-                        data.SetLength(entry.FileSize);
                     }
                     else
                     {
                         data = bdtStream.Read(entry.FileOffset, entry.FileSize);
                     }
 
+
+
                     string fileName;
                     string extension;
                     if (!dictionary.TryGetFileName(entry.FileNameHash, archiveNames, out fileName))
                     {
                         extension = GetDataExtension(data);
-                        fileName = string.Format(
-                            "{0:D10}_{1}{2}",
-                            entry.FileNameHash,
-                            fileNameWithoutExtension,
-                            extension);
+                        fileName = $"{entry.FileNameHash:D10}_{fileNameWithoutExtension}{extension}";
                     }
                     else
                     {
@@ -255,9 +252,7 @@ namespace BinderTool
                 || !TryGetFileExtension(signature, out extension))
             {
 
-                Debug.WriteLine(
-                    string.Format("Unknown signature: '{0}'",
-                    BitConverter.ToString(Encoding.ASCII.GetBytes(signature)).Replace("-", " ")));
+                Debug.WriteLine($"Unknown signature: '{BitConverter.ToString(Encoding.ASCII.GetBytes(signature)).Replace("-", " ")}'");
                 return ".bin";
             }
 
@@ -281,7 +276,6 @@ namespace BinderTool
 
         private static bool TryGetFileExtension(string signature, out string extension)
         {
-            extension = null;
             switch (signature)
             {
                 case "BND4":

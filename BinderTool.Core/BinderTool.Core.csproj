@@ -48,6 +48,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Bdf4\Bdf4File.cs" />
+    <Compile Include="Bhd5\Bhd5Range.cs" />
     <Compile Include="Common\DataContainer.cs" />
     <Compile Include="Bdt5\Bdt5FileStream.cs" />
     <Compile Include="Bhd5\Bhd5AesKey.cs" />

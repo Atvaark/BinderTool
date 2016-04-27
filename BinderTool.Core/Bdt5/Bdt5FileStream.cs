@@ -1,5 +1,4 @@
 ﻿using System.IO;
-using BinderTool.Core.Bhd5;
 
 namespace BinderTool.Core.Bdt5
 {
@@ -12,11 +11,8 @@ namespace BinderTool.Core.Bdt5
             _inputStream = inputStream;
         }
 
-        public long Length
-        {
-            get { return _inputStream.Length; }
-        }
-        
+        public long Length => _inputStream.Length;
+
         public MemoryStream Read(long fileOffset, long fileSize)
         {
             if (fileOffset + fileSize > _inputStream.Length)

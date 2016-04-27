@@ -1,5 +1,6 @@
 ﻿using System;
 using System.IO;
+using BinderTool.Core.Bhd5;
 using Org.BouncyCastle.Crypto;
 using Org.BouncyCastle.Crypto.Engines;
 using Org.BouncyCastle.Crypto.Modes;
@@ -12,11 +13,8 @@ namespace BinderTool.Core
     {
         public static MemoryStream DecryptAesEcb(Stream inputStream, byte[] key)
         {
-            AesEngine engine = new AesEngine();
-            KeyParameter parameter = new KeyParameter(key);
-            BufferedBlockCipher cipher = new BufferedBlockCipher(engine);
-            cipher.Init(false, parameter);
-            return DecryptAes(inputStream, cipher);
+            var cipher = CreateAesEcbCipher(key);
+            return DecryptAes(inputStream, cipher, inputStream.Length);
         }
 
         public static MemoryStream DecryptAesCbc(Stream inputStream, byte[] key, byte[] iv)
@@ -27,7 +25,7 @@ namespace BinderTool.Core
 
             BufferedBlockCipher cipher = new BufferedBlockCipher(new CbcBlockCipher(engine));
             cipher.Init(false, parameters);
-            return DecryptAes(inputStream, cipher);
+            return DecryptAes(inputStream, cipher, inputStream.Length);
         }
 
         public static MemoryStream DecryptAesCtr(Stream inputStream, byte[] key, byte[] iv)
@@ -38,13 +36,22 @@ namespace BinderTool.Core
 
             BufferedBlockCipher cipher = new BufferedBlockCipher(new SicBlockCipher(engine));
             cipher.Init(false, parameters);
-            return DecryptAes(inputStream, cipher);
+            return DecryptAes(inputStream, cipher, inputStream.Length);
+        }
+        
+        private static BufferedBlockCipher CreateAesEcbCipher(byte[] key)
+        {
+            AesEngine engine = new AesEngine();
+            KeyParameter parameter = new KeyParameter(key);
+            BufferedBlockCipher cipher = new BufferedBlockCipher(engine);
+            cipher.Init(false, parameter);
+            return cipher;
         }
 
-        private static MemoryStream DecryptAes(Stream inputStream, BufferedBlockCipher cipher)
+        private static MemoryStream DecryptAes(Stream inputStream, BufferedBlockCipher cipher, long length)
         {
-            byte[] input = new byte[inputStream.Length];
-            byte[] output = new byte[cipher.GetOutputSize((int)inputStream.Length)];
+            byte[] input = new byte[length];
+            byte[] output = new byte[cipher.GetOutputSize((int)length)];
             // TODO: Check that all input streams are correctly aligned with the block size.
             ////int blockSize = cipher.GetBlockSize();
             ////long inputLength = inputStream.Length;
@@ -56,7 +63,7 @@ namespace BinderTool.Core
             ////byte[] input = new byte[inputLength];
             ////byte[] output = new byte[cipher.GetOutputSize((int)inputLength)];
 
-            inputStream.Read(input, 0, (int)inputStream.Length);
+            inputStream.Read(input, 0, (int)length);
 
             int len = cipher.ProcessBytes(input, 0, input.Length, output, 0);
             cipher.DoFinal(output, len);
@@ -71,7 +78,7 @@ namespace BinderTool.Core
         ///     Decrypts a file with a provided decryption key.
         /// </summary>
         /// <param name="filePath">An encrypted file</param>
-        /// <param name="keyPath">A file containing a key in PEM format</param>
+        /// <param name="key">The RSA key in PEM format</param>
         /// <exception cref="ArgumentNullException">When the argument filePath is null</exception>
         /// <exception cref="ArgumentNullException">When the argument keyPath is null</exception>
         /// <returns>A memory stream with the decrypted file</returns>
@@ -79,20 +86,16 @@ namespace BinderTool.Core
         {
             if (filePath == null)
             {
-                throw new ArgumentNullException("filePath");
+                throw new ArgumentNullException(nameof(filePath));
             }
 
             if (key == null)
             {
-                throw new ArgumentNullException("keyPath");
+                throw new ArgumentNullException(nameof(key));
             }
-
-            StringReader keyReader = new StringReader(key);
-            PemReader pemReader = new PemReader(keyReader);
-            AsymmetricKeyParameter keyParameter = (AsymmetricKeyParameter)pemReader.ReadObject();
-
+            
+            AsymmetricKeyParameter keyParameter = GetKeyOrDefault(key);
             RsaEngine engine = new RsaEngine();
-
             engine.Init(false, keyParameter);
 
             FileStream inputStream = File.OpenRead(filePath);
@@ -130,6 +133,25 @@ namespace BinderTool.Core
             catch
             {
                 return null;
+            }
+        }
+
+        public static void DecryptAesEcb(MemoryStream inputStream, byte[] key, Bhd5Range[] ranges)
+        {
+            var cipher = CreateAesEcbCipher(key);
+
+            foreach (var range in ranges)
+            {
+                if (range.StartOffset == -1 || range.EndOffset == -1)
+                {
+                    continue;
+                }
+
+                inputStream.Position = range.StartOffset;
+                long length = range.EndOffset - range.StartOffset;
+                MemoryStream decryptedStream = DecryptAes(inputStream, cipher, length);
+                inputStream.Position = range.StartOffset;
+                decryptedStream.WriteTo(inputStream);
             }
         }
     }

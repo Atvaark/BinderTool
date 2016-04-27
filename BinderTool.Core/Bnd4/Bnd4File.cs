@@ -16,10 +16,7 @@ namespace BinderTool.Core.Bnd4
             _entries = new List<Bnd4FileEntry>();
         }
 
-        public List<Bnd4FileEntry> Entries
-        {
-            get { return _entries; }
-        }
+        public List<Bnd4FileEntry> Entries => _entries;
 
         public static Bnd4File ReadBnd4File(Stream inputStream)
         {
