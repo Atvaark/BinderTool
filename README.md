@@ -1,7 +1,7 @@
 # BinderTool
 A Dark Souls III bdt, bhd, bnd, dcx and sl2 unpacking tool
 
-Binary releases will be uploaded once v0.4 is stable and can work with all new archives.
+Binaries can be downloaded under [releases](https://github.com/Atvaark/BinderTool/releases).
 
 If you are looking for the Dark Souls II release check out the [v0.3](https://github.com/Atvaark/BinderTool/tree/v0.3) branch.
 
@@ -14,8 +14,8 @@ If you are looking for the Dark Souls II release check out the [v0.3](https://gi
   - [x] Data1.bhd - Data5.bhd
   - [x] Data1.bdt - Data5.bdt
   - [ ] .sl2
-  - [ ] .dcx inside .bhd files
-  - [ ] .bhd inside .bhd files
+  - [x] .dcx inside .bhd files
+  - [x] .bhd inside .bhd files
 - [x] Fix decrypting Data1.bhd - Data5.bhd
   - [x] Fix decrypting files with known file sizes
   - [x] Fix decrypting files with unknown file sizes
@@ -24,12 +24,11 @@ If you are looking for the Dark Souls II release check out the [v0.3](https://gi
 - *This is the regulation file, which contains all game balance changes. The decryption key (either AES or RSA) is embedded somewhere in the application.*
 - [x] Fix unpacking Data1.bdt - Data5.bdt
   - [x] Fix unpacking unencrypted files
-  - [ ] Fix unpacking encrypted files e.g. .dcx and .bhd
+  - [x] Fix unpacking encrypted files e.g. .dcx and .bhd
   - *.dcx and .bhd files are encrypted one more time for some reason.*
-- [ ] Fix unpacking common .bhd files
-  - [ ] Fix unpacking 
-  - *Only works with smaller files at the moment. All data after position 1024 is still encrypted.*
-  - [ ] Fix reading embedded file names
+- [x] Fix unpacking common .bhd files
+  - [x] Fix unpacking 
+  - [x] Fix reading embedded file names
   - *The embedded file names can't be used at the moment, because they are partially encrypted*
 - [x] Fix unpacking common .bdt files
 - [x] Fix unpacking .dcx files
