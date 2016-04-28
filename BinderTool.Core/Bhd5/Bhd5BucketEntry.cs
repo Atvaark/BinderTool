@@ -5,7 +5,6 @@ namespace BinderTool.Core.Bhd5
     public class Bhd5BucketEntry
     {
         public uint FileNameHash { get; private set; }
-        public uint FileNameHashUnknown { get; private set; }
         public long FileSize { get; set; }
         public long PaddedFileSize { get; set; }
         public long FileOffset { get; private set; }

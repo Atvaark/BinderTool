@@ -96,7 +96,7 @@ namespace BinderTool
             {
                 default:
                     archiveNames = new List<string>()
-                    {   
+                    {
                         "action",
                         "adhoc",
                         "aiscript",
@@ -152,7 +152,7 @@ namespace BinderTool
 
             MemoryStream bhdStream = DecryptBhdFile(Path.ChangeExtension(options.InputPath, "bhd"));
             Bhd5File bhdFile = Bhd5File.Read(bhdStream);
-            
+
             foreach (var bucket in bhdFile.GetBuckets())
             {
                 foreach (var entry in bucket.GetEntries())
@@ -173,33 +173,26 @@ namespace BinderTool
                     if (entry.IsEncrypted)
                     {
                         data = bdtStream.Read(entry.FileOffset, entry.PaddedFileSize);
-
                         CryptographyUtility.DecryptAesEcb(data, entry.AesKey.Key, entry.AesKey.Ranges);
-                        //data = CryptographyUtility.DecryptAesEcb(data, entry.AesKey.Key);
-
                         data.Position = 0;
                         data.SetLength(entry.FileSize);
-
-                        // BUG: DCX files are encrypted one more time (offset 78)
-                        // BUG: BHF4 files are encrypted one more time (offset 1024)
                     }
                     else
                     {
                         data = bdtStream.Read(entry.FileOffset, entry.FileSize);
                     }
 
-
-
                     string fileName;
                     string extension;
-                    if (!dictionary.TryGetFileName(entry.FileNameHash, archiveNames, out fileName))
+                    bool fileNameFound = dictionary.TryGetFileName(entry.FileNameHash, archiveNames, out fileName);
+                    if (fileNameFound)
                     {
-                        extension = GetDataExtension(data);
-                        fileName = $"{entry.FileNameHash:D10}_{fileNameWithoutExtension}{extension}";
+                        extension = Path.GetExtension(fileName);
                     }
                     else
                     {
-                        extension = Path.GetExtension(fileName);
+                        extension = GetDataExtension(data);
+                        fileName = $"{entry.FileNameHash:D10}_{fileNameWithoutExtension}{extension}";
                     }
 
                     Debug.WriteLine(
@@ -208,11 +201,11 @@ namespace BinderTool
                         fileName,
                         extension,
                         entry.FileNameHash,
-                        entry.FileNameHashUnknown,
                         entry.FileOffset,
                         entry.FileSize,
                         entry.PaddedFileSize,
-                        entry.IsEncrypted);
+                        entry.IsEncrypted,
+                        fileNameFound);
 
                     string newFileNamePath = Path.Combine(options.OutputPath, fileName);
                     Directory.CreateDirectory(Path.GetDirectoryName(newFileNamePath));

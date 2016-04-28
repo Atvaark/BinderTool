@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 
@@ -46,7 +47,8 @@ namespace BinderTool
 
         public void Add(string archiveName, string fileName)
         {
-            ulong hash = GetHashCode(fileName);
+            string hashablePath = "/" + archiveName + "/" + fileName;
+            ulong hash = GetHashCode(hashablePath);
 
             Dictionary<ulong, List<string>> archiveDictionary;
             if (_dictionary.TryGetValue(archiveName, out archiveDictionary) == false)
@@ -75,22 +77,26 @@ namespace BinderTool
             string[] lines = File.ReadAllLines(dictionaryPath);
             foreach (string line in lines)
             {
-                string[] splitLine = line.Split('\t');
-                string archiveName = splitLine[0];
-                string fileName = splitLine[1];
-                dictionary.Add(archiveName, fileName);
+                int i = line.IndexOf(":/", StringComparison.Ordinal);
+                if (i != -1)
+                {
+                    string archiveName = line.Substring(0, i);
+                    string fileName = line.Substring(i + 2, line.Length - i - 2);
+
+                    dictionary.Add(archiveName, fileName);
+                }
             }
 
             return dictionary;
         }
 
-        private static uint GetHashCode(string filePath, uint initialHash = 0)
+        private static uint GetHashCode(string filePath, uint prime = 37u)
         {
             if (string.IsNullOrEmpty(filePath))
-                return initialHash;
+                return 0u;
             return filePath.Replace('\\', '/')
                 .ToLowerInvariant()
-                .Aggregate(initialHash, (i, c) => i * 137 + c);
+                .Aggregate(0u, (i, c) => i * prime + c);
         }
 
         public static string NormalizeFileName(string fileName)
