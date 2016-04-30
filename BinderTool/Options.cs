@@ -70,13 +70,17 @@ namespace BinderTool
             // .chrbnd
             // .chrtpfbhd
             // .mtdbnd
-            //  .shaderbnd
+            // .shaderbnd
             // .objbnd
             // .partsbnd
             // .rumblebnd
             // .hkxbhd
             // .tpfbhd
-            if (fileName.EndsWith("bnd", StringComparison.InvariantCultureIgnoreCase))
+            // .shaderbdle
+            // .shaderbdledebug
+            if (fileName.EndsWith("bnd", StringComparison.InvariantCultureIgnoreCase)
+                || fileName.EndsWith("bdle", StringComparison.InvariantCultureIgnoreCase)
+                || fileName.EndsWith("bdledebug", StringComparison.InvariantCultureIgnoreCase))
             {
                 return FileType.Bnd;
             }

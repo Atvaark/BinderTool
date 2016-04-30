@@ -7,6 +7,11 @@ namespace BinderTool
 {
     public class FileNameDictionary
     {
+        private static string[] _virtualRoots = {
+            @"N:\SPRJ\data\",
+            @"N:\FDP\data\"
+        };
+
         private readonly Dictionary<string, Dictionary<ulong, List<string>>> _dictionary;
 
         private FileNameDictionary()
@@ -101,10 +106,13 @@ namespace BinderTool
 
         public static string NormalizeFileName(string fileName)
         {
-            const string virtualRoot = "N:\\FDP\\data\\";
-            if (fileName.StartsWith(virtualRoot))
+            foreach (var virtualRoot in _virtualRoots)
             {
-                fileName = fileName.Substring(virtualRoot.Length);
+                if (fileName.StartsWith(virtualRoot))
+                {
+                    fileName = fileName.Substring(virtualRoot.Length);
+                    break;
+                }
             }
 
             return fileName.Replace('/', '\\').TrimStart('\\');

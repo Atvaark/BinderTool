@@ -27,7 +27,7 @@ namespace BinderTool.Core.Bnd4
 
         private void Read(Stream inputStream)
         {
-            BinaryReader reader = new BinaryReader(inputStream, Encoding.UTF8, true);
+            BinaryReader reader = new BinaryReader(inputStream, Encoding.ASCII, true);
             string signature = reader.ReadString(4);
             if (signature != Bnd4Signature)
                 throw new Exception("Unknown signature");
@@ -38,7 +38,21 @@ namespace BinderTool.Core.Bnd4
             int directoryEntrySize = reader.ReadInt32();
             reader.Skip(4);
             int dataOffset = reader.ReadInt32();
-            reader.Skip(20); // encoding could also be here as a flag
+            reader.Skip(4);
+            byte encoding = reader.ReadByte();
+            reader.Skip(15);
+
+            switch (encoding)
+            {
+                case 0:
+                    break;
+                case 1:
+                    reader = new BinaryReader(inputStream, Encoding.Unicode, true);
+                    break;
+                default:
+                    Debug.WriteLine("Unknown encoding " + encoding);
+                    break;
+            }
 
             // Directory section
             for (int i = 0; i < fileCount; i++)
@@ -46,8 +60,7 @@ namespace BinderTool.Core.Bnd4
                 int fileEntryOffset;
                 int fileNameOffset;
 
-                int encoding = reader.ReadInt32();
-                reader.Skip(4);
+                reader.Skip(8);
                 int fileEntrySize = reader.ReadInt32();
                 reader.Skip(4);
                 if (directoryEntrySize == 36)
@@ -62,21 +75,6 @@ namespace BinderTool.Core.Bnd4
                     fileEntryOffset = reader.ReadInt32();
                     fileNameOffset = reader.ReadInt32();
                 }
-
-                // TODO: Check encoding ids are correct. 
-                // DSII (192 = unicode , 64 = ascii?)
-                // DSIII (64 = unicode , 192 = ascii?)
-                switch (encoding)
-                {
-                    case 64:
-                        reader = new BinaryReader(inputStream, Encoding.Unicode, true);
-                        break;
-                    case 192:
-                        break;
-                    default:
-                        Debug.WriteLine("Unknown encoding " + encoding);
-                            break;
-                }
                 
                 long position = reader.GetPosition();
                 string fileName = "";
@@ -85,6 +83,7 @@ namespace BinderTool.Core.Bnd4
                     reader.Seek(fileNameOffset);
                     fileName = reader.ReadNullTerminatedString();
                 }
+
                 reader.Seek(fileEntryOffset);
                 _entries.Add(Bnd4FileEntry.Read(inputStream, fileEntrySize, fileName));
                 reader.Seek(position);

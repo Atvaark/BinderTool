@@ -195,6 +195,24 @@ namespace BinderTool
                         fileName = $"{entry.FileNameHash:D10}_{fileNameWithoutExtension}{extension}";
                     }
 
+                    if (extension == ".dcx")
+                    {
+                        DcxFile dcxFile = DcxFile.Read(data);
+                        data = new MemoryStream(dcxFile.Decompress());
+
+                        fileName = Path.GetFileNameWithoutExtension(fileName);
+
+                        if (fileNameFound)
+                        {
+                            extension = Path.GetExtension(fileName);
+                        }
+                        else
+                        {
+                            extension = GetDataExtension(data);
+                            fileName += extension;
+                        }
+                    }
+
                     Debug.WriteLine(
                         "{0}\t{1}\t{2}\t{3}\t{4}\t{5}\t{6}\t{7}\t{8}",
                         fileNameWithoutExtension,
@@ -227,7 +245,7 @@ namespace BinderTool
             }
 
             string sampleSignature;
-            if (!TryGetSignature(data, out sampleSignature)
+            if (!TryGetAsciiSignature(data, 4, out sampleSignature)
                 || sampleSignature != DcxFile.DcxSignature)
             {
                 return false;
@@ -241,28 +259,54 @@ namespace BinderTool
         {
             string signature;
             string extension;
-            if (!TryGetSignature(data, out signature)
-                || !TryGetFileExtension(signature, out extension))
-            {
 
-                Debug.WriteLine($"Unknown signature: '{BitConverter.ToString(Encoding.ASCII.GetBytes(signature)).Replace("-", " ")}'");
-                return ".bin";
+            if (TryGetAsciiSignature(data, 4, out signature)
+                && TryGetFileExtension(signature, out extension))
+            {
+                return extension;
             }
 
-            return extension;
+            if (TryGetUnicodeSignature(data, 4, out signature)
+                && TryGetFileExtension(signature, out extension))
+            {
+                return extension;
+            }
+
+            if (TryGetAsciiSignature(data, 26, out signature)
+                && TryGetFileExtension(signature.Substring(12, 14), out extension))
+            {
+                return extension;
+            }
+
+            Debug.WriteLine($"Unknown signature: '{BitConverter.ToString(Encoding.ASCII.GetBytes(signature)).Replace("-", " ")}'");
+            return ".bin";
         }
 
-        private static bool TryGetSignature(MemoryStream stream, out string signature)
+        private static bool TryGetAsciiSignature(MemoryStream stream, int signatureLength, out string signature)
+        {
+            const int asciiBytesPerChar = 1;
+            return TryGetSignature(stream, Encoding.ASCII, asciiBytesPerChar, signatureLength, out signature);
+        }
+
+        private static bool TryGetUnicodeSignature(MemoryStream stream, int signatureLength, out string signature)
+        {
+            const int unicodeBytesPerChar = 2;
+            return TryGetSignature(stream, Encoding.Unicode, unicodeBytesPerChar, signatureLength, out signature);
+        }
+
+        private static bool TryGetSignature(MemoryStream stream, Encoding encoding, int bytesPerChar, int signatureLength, out string signature)
         {
             signature = null;
-            if (stream.Length < 4)
+
+            long startPosition = stream.Position;
+            if (stream.Length - startPosition < bytesPerChar * signatureLength)
             {
                 return false;
             }
 
-            BinaryReader reader = new BinaryReader(stream, Encoding.ASCII, true);
-            signature = new string(reader.ReadChars(4));
-            stream.Position = 0;
+            BinaryReader reader = new BinaryReader(stream, encoding, true);
+            signature = new string(reader.ReadChars(signatureLength));
+            stream.Position = startPosition;
 
             return true;
         }
@@ -287,6 +331,7 @@ namespace BinderTool
                     extension = ".tae";
                     return true;
                 case "fSSL":
+                case "fsSL":
                     extension = ".fssl";
                     return true;
                 case "TPF\0":
@@ -311,7 +356,7 @@ namespace BinderTool
                     extension = ".txt";
                     return true;
                 case "\x1BLua":
-                    extension = ".lua";
+                    extension = ".lua"; // or .hks
                     return true;
                 case "DDS ":
                     extension = ".dds";
@@ -326,7 +371,25 @@ namespace BinderTool
                     extension = ".gfx";
                     return true;
                 case "ENFL":
-                    extension = ".enf"; // ?
+                    extension = ".edf"; // ?
+                    return true;
+                case "EVD\0":
+                    extension = ".evd"; // ?
+                    return true;
+                case "NVMA":
+                    extension = ".nvma"; // ?
+                    return true;
+                case "MSB ":
+                    extension = ".msb"; // ?
+                    return true;
+                case "BJBO":
+                    extension = ".bjbo"; // ?
+                    return true;
+                case "ONAV":
+                    extension = ".onav"; // ?
+                    return true;
+                case "ITLIMITER_INFO":
+                    extension = ".itlimiterinfo"; // ?
                     return true;
                 default:
                     extension = ".bin";
