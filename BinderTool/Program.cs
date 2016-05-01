@@ -13,6 +13,7 @@ using BinderTool.Core.Bnd4;
 using BinderTool.Core.Dcx;
 using BinderTool.Core.Regulation;
 using BinderTool.Core.Sl2;
+using BinderTool.Core.Tpf;
 
 namespace BinderTool
 {
@@ -74,6 +75,9 @@ namespace BinderTool
                     break;
                 case FileType.Savegame:
                     UnpackSl2File(options);
+                    break;
+                case FileType.Tpf:
+                    UnpackTpfFile(options);
                     break;
                 default:
                     throw new ArgumentOutOfRangeException($"Unable to handle type '{options.InputType}'");
@@ -539,6 +543,20 @@ namespace BinderTool
                     {
                         data.CopyTo(outputStream);
                     }
+                }
+            }
+        }
+
+        private static void UnpackTpfFile(Options options)
+        {
+            using (FileStream inputStream = new FileStream(options.InputPath, FileMode.Open))
+            {
+                TpfFile tpfFile = TpfFile.OpenTpfFile(inputStream);
+                foreach (var entry in tpfFile.Entries)
+                {
+                    string outputFilePath = Path.Combine(options.OutputPath, entry.FileName);
+                    Directory.CreateDirectory(Path.GetDirectoryName(outputFilePath));
+                    File.WriteAllBytes(outputFilePath, entry.Data);
                 }
             }
         }

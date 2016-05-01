@@ -70,6 +70,8 @@
     <Compile Include="Regulation\RegulationFile.cs" />
     <Compile Include="Sl2\Sl2File.cs" />
     <Compile Include="Sl2\Sl2UserData.cs" />
+    <Compile Include="Tpf\TpfFile.cs" />
+    <Compile Include="Tpf\TpfFileEntry.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />

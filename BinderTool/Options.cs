@@ -116,6 +116,11 @@ namespace BinderTool
                 return FileType.Bhd;
             }
 
+            if (fileName.EndsWith(".tpf", StringComparison.InvariantCultureIgnoreCase))
+            {
+                return FileType.Tpf;
+            }
+
             return FileType.Unknown;
         }
     }

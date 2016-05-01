@@ -10,6 +10,7 @@
         Bdt,
         Bhd,
         Bnd,
-        Savegame
+        Savegame,
+        Tpf
     }
 }
