@@ -453,10 +453,10 @@ namespace BinderTool
         {
             using (FileStream inputStream = new FileStream(options.InputPath, FileMode.Open))
             {
-                Sl2File sl2File = Sl2File.ReadSl2File(inputStream);
+                Sl2File sl2File = Sl2File.ReadSl2File(inputStream, DecryptionKeys.UserDataKey);
                 foreach (var userData in sl2File.UserData)
                 {
-                    string outputFilePath = Path.Combine(options.OutputPath, userData.UserDataName);
+                    string outputFilePath = Path.Combine(options.OutputPath, userData.Name);
                     File.WriteAllBytes(outputFilePath, userData.DecryptedUserData);
                 }
             }

@@ -8,18 +8,22 @@ namespace BinderTool.Core.Sl2
     public class Sl2File
     {
         private const string Sl2Signature = "BND4";
+
+        private readonly byte[] _key;
+
         private readonly List<Sl2UserData> _userData;
 
-        public Sl2File()
+        public Sl2File(byte[] key)
         {
+            _key = key;
             _userData = new List<Sl2UserData>();
         }
 
         public List<Sl2UserData> UserData => _userData;
 
-        public static Sl2File ReadSl2File(Stream inputStream)
+        public static Sl2File ReadSl2File(Stream inputStream, byte[] key)
         {
-            Sl2File sl2File = new Sl2File();
+            Sl2File sl2File = new Sl2File(key);
             sl2File.Read(inputStream);
             return sl2File;
         }
@@ -60,16 +64,9 @@ namespace BinderTool.Core.Sl2
                     fileName = unicodeReader.ReadNullTerminatedString();
                 }
                 reader.Seek(userDataOffset);
-                _userData.Add(Sl2UserData.ReadSl2UserData(inputStream, userDataSize, fileName));
+                _userData.Add(Sl2UserData.ReadSl2UserData(inputStream, _key, userDataSize, fileName));
                 reader.Seek(position);
             }
-        }
-
-        public void Write(Stream outputStream)
-        {
-            BinaryWriter writer = new BinaryWriter(outputStream, Encoding.ASCII, true);
-            // TODO: Implement Sl2File.Write
-            throw new NotImplementedException();
         }
     }
 }

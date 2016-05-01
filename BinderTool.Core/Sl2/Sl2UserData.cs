@@ -7,38 +7,28 @@ namespace BinderTool.Core.Sl2
     public class Sl2UserData
     {
         private const int UserDataIvSize = 16;
-
-        private static readonly byte[] UserDataKey =
-        {
-            0xB7, 0xFD, 0x46, 0x3E, 0x4A, 0x9C, 0x11, 0x02,
-            0xDF, 0x17, 0x39, 0xE5, 0xF3, 0xB2, 0xA5, 0x0F
-        };
+        
+        private readonly byte[] _key;
 
         private readonly byte[] _iv;
 
-        public Sl2UserData()
+        public Sl2UserData(byte[] key)
         {
+            _key = key;
             _iv = new byte[UserDataIvSize];
         }
 
-        public string UserDataName { get; set; }
+        public string Name { get; set; }
 
         public byte[] EncryptedUserData { get; private set; }
 
-        public byte[] DecryptedUserData => CryptographyUtility.DecryptAesCbc(new MemoryStream(EncryptedUserData), UserDataKey, _iv).ToArray();
-
-        public void Write(Stream outputStream)
+        public byte[] DecryptedUserData => CryptographyUtility.DecryptAesCbc(new MemoryStream(EncryptedUserData), _key, _iv).ToArray();
+        
+        public static Sl2UserData ReadSl2UserData(Stream inputStream, byte[] key, int size, string name)
         {
-            BinaryWriter writer = new BinaryWriter(outputStream, Encoding.ASCII, true);
-            // TODO: Implement Sl2UserData.Write
-            throw new NotImplementedException();
-        }
-
-        public static Sl2UserData ReadSl2UserData(Stream inputStream, int userDataSize, string userDataName)
-        {
-            Sl2UserData sl2UserData = new Sl2UserData();
-            sl2UserData.UserDataName = userDataName;
-            sl2UserData.Read(inputStream, userDataSize);
+            Sl2UserData sl2UserData = new Sl2UserData(key);
+            sl2UserData.Name = name;
+            sl2UserData.Read(inputStream, size);
             return sl2UserData;
         }
 

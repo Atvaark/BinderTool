@@ -23,6 +23,25 @@ namespace BinderTool
             return FileKeyDictionary[file];
         }
 
+        /// <summary>
+        /// The key can be read by setting a breakpoint on the "create_serialCipherKey" method of the SerialKeyGeneratorSPI class. 
+        /// Signature: SerialCipherKey *__fastcall SerialKeyGeneratorSPI::create_serialCipherKey(
+        ///     SerialKeyGeneratorSPI *this,
+        ///     const void *pKeyType,
+        ///     const void *pKey,
+        ///     unsigned int keylen,
+        ///     const void *pHeapAllocator)
+        /// 
+        /// These are the DarkSoulsIII.exe 1.3.1.0 offsets:
+        /// Address (vtable): 0000000142AECBB8 (DLCR::DLSerialKeyGeneratorSPI::vftable + 0x08) 
+        /// Address (method): 0000000141790180 
+        /// </summary>
+        public static readonly byte[] UserDataKey =
+        {
+            0xFD, 0x46, 0x4D, 0x69, 0x5E, 0x69, 0xA3, 0x9A,
+            0x10, 0xE3, 0x19, 0xA7, 0xAC, 0xE8, 0xB7, 0xFA
+        };
+
         private const string Data1Key =
 @"-----BEGIN RSA PUBLIC KEY-----
 MIIBCwKCAQEA05hqyboW/qZaJ3GBIABFVt1X1aa0/sKINklvpkTRC+5Ytbxvp18L
