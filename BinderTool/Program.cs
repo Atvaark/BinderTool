@@ -11,6 +11,7 @@ using BinderTool.Core.Bhd5;
 using BinderTool.Core.Bhf4;
 using BinderTool.Core.Bnd4;
 using BinderTool.Core.Dcx;
+using BinderTool.Core.Regulation;
 using BinderTool.Core.Sl2;
 
 namespace BinderTool
@@ -51,7 +52,8 @@ namespace BinderTool
             switch (options.InputType)
             {
                 case FileType.Regulation:
-                    throw new NotImplementedException();
+                    UnpackRegulationFile(options);
+                    break;
                 case FileType.Dcx:
                     UnpackDcxFile(options);
                     break;
@@ -65,7 +67,8 @@ namespace BinderTool
                     UnpackBdf4File(options);
                     break;
                 case FileType.Bhd:
-                    throw new NotImplementedException();
+                    UnpackBhf4File(options);
+                    break;
                 case FileType.Bnd:
                     UnpackBndFile(options);
                     break;
@@ -464,12 +467,12 @@ namespace BinderTool
 
         private static void UnpackRegulationFile(Options options)
         {
-            //using (FileStream inputStream = new FileStream(options.InputPath, FileMode.Open))
-            //{
-            //    RegulationFile encryptedRegulationFile = RegulationFile.ReadRegulationFile(inputStream);
-            //    DcxFile compressedRegulationFile = DcxFile.Read(new MemoryStream(encryptedRegulationFile.DecryptedData));
-            //    UnpackBndFile(new MemoryStream(compressedRegulationFile.d), options.OutputPath);
-            //}
+            using (FileStream inputStream = new FileStream(options.InputPath, FileMode.Open))
+            {
+                RegulationFile encryptedRegulationFile = RegulationFile.ReadRegulationFile(inputStream, DecryptionKeys.RegulationFileKey);
+                DcxFile compressedRegulationFile = DcxFile.Read(new MemoryStream(encryptedRegulationFile.DecryptData()));
+                UnpackBndFile(new MemoryStream(compressedRegulationFile.Decompress()), options.OutputPath);
+            }
         }
 
         private static void UnpackDcxFile(Options options)
@@ -538,6 +541,11 @@ namespace BinderTool
                     }
                 }
             }
+        }
+
+        private static void UnpackBhf4File(Options options)
+        {
+            Console.WriteLine($"The file : \'{options.InputPath}\' is already decrypted.");
         }
 
         private static MemoryStream DecryptBhdFile(string filePath)
