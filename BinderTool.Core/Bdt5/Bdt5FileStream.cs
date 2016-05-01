@@ -1,8 +1,9 @@
-﻿using System.IO;
+﻿using System;
+using System.IO;
 
 namespace BinderTool.Core.Bdt5
 {
-    public class Bdt5FileStream
+    public class Bdt5FileStream : IDisposable
     {
         private readonly Stream _inputStream;
 
@@ -24,11 +25,15 @@ namespace BinderTool.Core.Bdt5
             return new MemoryStream(buffer);
         }
 
-
         public static Bdt5FileStream OpenFile(string path, FileMode mode, FileAccess access)
         {
             FileStream bdtStream = new FileStream(path, mode, access);
             return new Bdt5FileStream(bdtStream);
+        }
+
+        public void Dispose()
+        {
+            _inputStream.Dispose();
         }
     }
 }

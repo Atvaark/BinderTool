@@ -10,7 +10,6 @@ using BinderTool.Core.Bdt5;
 using BinderTool.Core.Bhd5;
 using BinderTool.Core.Bhf4;
 using BinderTool.Core.Bnd4;
-using BinderTool.Core.Common;
 using BinderTool.Core.Dcx;
 using BinderTool.Core.Sl2;
 
@@ -146,62 +145,43 @@ namespace BinderTool
             FileNameDictionary dictionary = FileNameDictionary.OpenFromFile(dictionaryPath);
 
             string fileNameWithoutExtension = Path.GetFileName(options.InputPath).Replace(".bdt", "");
-
             List<string> archiveNames = GetArchiveNamesFromFileName(fileNameWithoutExtension);
-            Bdt5FileStream bdtStream = Bdt5FileStream.OpenFile(options.InputPath, FileMode.Open, FileAccess.Read);
 
-            MemoryStream bhdStream = DecryptBhdFile(Path.ChangeExtension(options.InputPath, "bhd"));
-            Bhd5File bhdFile = Bhd5File.Read(bhdStream);
-
-            foreach (var bucket in bhdFile.GetBuckets())
+            using (Bdt5FileStream bdtStream = Bdt5FileStream.OpenFile(options.InputPath, FileMode.Open, FileAccess.Read))
             {
-                foreach (var entry in bucket.GetEntries())
+                Bhd5File bhdFile = Bhd5File.Read(DecryptBhdFile(Path.ChangeExtension(options.InputPath, "bhd")));
+                foreach (var bucket in bhdFile.GetBuckets())
                 {
-                    MemoryStream data;
-                    if (entry.FileSize == 0)
+                    foreach (var entry in bucket.GetEntries())
                     {
-                        long fileSize;
-                        if (!TryReadFileSize(entry, bdtStream, out fileSize))
+                        MemoryStream data;
+                        if (entry.FileSize == 0)
                         {
-                            Console.WriteLine("Unable to determine the length of file '{0:D10}'", entry.FileNameHash);
-                            continue;
+                            long fileSize;
+                            if (!TryReadFileSize(entry, bdtStream, out fileSize))
+                            {
+                                Console.WriteLine("Unable to determine the length of file '{0:D10}'", entry.FileNameHash);
+                                continue;
+                            }
+
+                            entry.FileSize = fileSize;
                         }
 
-                        entry.FileSize = fileSize;
-                    }
+                        if (entry.IsEncrypted)
+                        {
+                            data = bdtStream.Read(entry.FileOffset, entry.PaddedFileSize);
+                            CryptographyUtility.DecryptAesEcb(data, entry.AesKey.Key, entry.AesKey.Ranges);
+                            data.Position = 0;
+                            data.SetLength(entry.FileSize);
+                        }
+                        else
+                        {
+                            data = bdtStream.Read(entry.FileOffset, entry.FileSize);
+                        }
 
-                    if (entry.IsEncrypted)
-                    {
-                        data = bdtStream.Read(entry.FileOffset, entry.PaddedFileSize);
-                        CryptographyUtility.DecryptAesEcb(data, entry.AesKey.Key, entry.AesKey.Ranges);
-                        data.Position = 0;
-                        data.SetLength(entry.FileSize);
-                    }
-                    else
-                    {
-                        data = bdtStream.Read(entry.FileOffset, entry.FileSize);
-                    }
-
-                    string fileName;
-                    string extension;
-                    bool fileNameFound = dictionary.TryGetFileName(entry.FileNameHash, archiveNames, out fileName);
-                    if (fileNameFound)
-                    {
-                        extension = Path.GetExtension(fileName);
-                    }
-                    else
-                    {
-                        extension = GetDataExtension(data);
-                        fileName = $"{entry.FileNameHash:D10}_{fileNameWithoutExtension}{extension}";
-                    }
-
-                    if (extension == ".dcx")
-                    {
-                        DcxFile dcxFile = DcxFile.Read(data);
-                        data = new MemoryStream(dcxFile.Decompress());
-
-                        fileName = Path.GetFileNameWithoutExtension(fileName);
-
+                        string fileName;
+                        string extension;
+                        bool fileNameFound = dictionary.TryGetFileName(entry.FileNameHash, archiveNames, out fileName);
                         if (fileNameFound)
                         {
                             extension = Path.GetExtension(fileName);
@@ -209,25 +189,46 @@ namespace BinderTool
                         else
                         {
                             extension = GetDataExtension(data);
-                            fileName += extension;
+                            fileName = $"{entry.FileNameHash:D10}_{fileNameWithoutExtension}{extension}";
                         }
+
+                        // TODO: Handle .enc files (regulation:/regulation.regbnd.dcx.enc)
+                        // Example: 2084217123_Data1.bin
+
+                        if (extension == ".dcx")
+                        {
+                            DcxFile dcxFile = DcxFile.Read(data);
+                            data = new MemoryStream(dcxFile.Decompress());
+
+                            fileName = Path.GetFileNameWithoutExtension(fileName);
+
+                            if (fileNameFound)
+                            {
+                                extension = Path.GetExtension(fileName);
+                            }
+                            else
+                            {
+                                extension = GetDataExtension(data);
+                                fileName += extension;
+                            }
+                        }
+
+                        Debug.WriteLine(
+                            "{0}\t{1}\t{2}\t{3}\t{4}\t{5}\t{6}\t{7}\t{8}",
+                            fileNameWithoutExtension,
+                            fileName,
+                            extension,
+                            entry.FileNameHash,
+                            entry.FileOffset,
+                            entry.FileSize,
+                            entry.PaddedFileSize,
+                            entry.IsEncrypted,
+                            fileNameFound);
+
+                        string newFileNamePath = Path.Combine(options.OutputPath, fileName);
+                        Directory.CreateDirectory(Path.GetDirectoryName(newFileNamePath));
+                        File.WriteAllBytes(newFileNamePath, data.ToArray());
                     }
-
-                    Debug.WriteLine(
-                        "{0}\t{1}\t{2}\t{3}\t{4}\t{5}\t{6}\t{7}\t{8}",
-                        fileNameWithoutExtension,
-                        fileName,
-                        extension,
-                        entry.FileNameHash,
-                        entry.FileOffset,
-                        entry.FileSize,
-                        entry.PaddedFileSize,
-                        entry.IsEncrypted,
-                        fileNameFound);
-
-                    string newFileNamePath = Path.Combine(options.OutputPath, fileName);
-                    Directory.CreateDirectory(Path.GetDirectoryName(newFileNamePath));
-                    File.WriteAllBytes(newFileNamePath, data.ToArray());
                 }
             }
         }
@@ -332,7 +333,7 @@ namespace BinderTool
                     return true;
                 case "fSSL":
                 case "fsSL":
-                    extension = ".fssl";
+                    extension = ".esd";
                     return true;
                 case "TPF\0":
                     extension = ".tpf";
@@ -370,6 +371,27 @@ namespace BinderTool
                 case "GFX\v":
                     extension = ".gfx";
                     return true;
+                case "SMD\0":
+                    extension = ".metaparam";
+                    return true;
+                case "SMDD":
+                    extension = ".metadebug";
+                    return true;
+                case "CLM2":
+                    extension = ".clm2";
+                    return true;
+                case "FLVE":
+                    extension = ".flver";
+                    return true;
+                case "F2TR":
+                    extension = ".flver2tri";
+                    return true;
+                case "FRTR":
+                    extension = ".tri";
+                    return true;
+                case "FXR\0":
+                    extension = ".fxr";
+                    return true;
                 case "ENFL":
                     extension = ".edf"; // ?
                     return true;
@@ -393,9 +415,8 @@ namespace BinderTool
                     return true;
                 default:
                     extension = ".bin";
-                    break;
+                    return false;
             }
-            return false;
         }
 
         private static void UnpackBhdFile(Options options)
@@ -477,10 +498,8 @@ namespace BinderTool
 
         private static void UnpackBdf4File(Options options)
         {
-            var bdfDirectory = Path.GetDirectoryName(options.InputPath);
-            var bhf4FilePath = options.InputPath.Substring(0, options.InputPath.Length - 3) + "bhd";
-
-            if (File.Exists(bhf4FilePath) == false)
+            string bhf4FilePath = Path.ChangeExtension(options.InputPath, "bhd");
+            if (!File.Exists(bhf4FilePath))
             {
                 // HACK: Adding 132 to a hash of a text that ends with XXX.bdt will give you the hash of XXX.bhd.
                 string[] split = Path.GetFileNameWithoutExtension(options.InputPath).Split('_');
@@ -489,30 +508,35 @@ namespace BinderTool
                 {
                     hash += 132;
                     split[0] = hash.ToString("D10");
-                    bhf4FilePath = Path.Combine(bdfDirectory, String.Join("_", split) + ".bhd");
+                    string bdfDirectoryPath = Path.GetDirectoryName(options.InputPath);
+                    bhf4FilePath = Path.Combine(bdfDirectoryPath, String.Join("_", split) + ".bhd");
                 }
             }
 
-            using (FileStream bhf4InputStream = new FileStream(bhf4FilePath, FileMode.Open))
-            using (FileStream bdf4InputStream = new FileStream(options.InputPath, FileMode.Open))
+            using (Bdf4FileStream bdf4InputStream = Bdf4FileStream.OpenFile(options.InputPath, FileMode.Open, FileAccess.Read))
             {
-                Bhf4File bhf4File = Bhf4File.ReadBhf4File(bhf4InputStream);
-                Bdf4File bdf4File = Bdf4File.ReadBdf4File(bdf4InputStream);
-                foreach (var file in bdf4File.ReadData(bdf4InputStream, bhf4File))
+                Bhf4File bhf4File = Bhf4File.OpenBhf4File(bhf4FilePath);
+                foreach (var entry in bhf4File.Entries)
                 {
-                    ExportFile(file, options.OutputPath);
+                    MemoryStream data = bdf4InputStream.Read(entry.FileOffset, entry.FileSize);
+
+                    string fileName = entry.FileName;
+                    string fileExtension = Path.GetExtension(fileName);
+                    if (fileExtension == ".dcx")
+                    {
+                        DcxFile dcxFile = DcxFile.Read(data);
+                        data = new MemoryStream(dcxFile.Decompress());
+
+                        fileName = Path.GetFileNameWithoutExtension(fileName);
+                    }
+
+                    string outputFilePath = Path.Combine(options.OutputPath, fileName);
+                    Directory.CreateDirectory(Path.GetDirectoryName(outputFilePath));
+                    using (FileStream outputStream = new FileStream(outputFilePath, FileMode.Create))
+                    {
+                        data.CopyTo(outputStream);
+                    }
                 }
-            }
-        }
-
-        private static void ExportFile(DataContainer file, string outputPath)
-        {
-            string outputFilePath = Path.Combine(outputPath, file.Name);
-
-            Directory.CreateDirectory(Path.GetDirectoryName(outputFilePath));
-            using (FileStream outputStream = new FileStream(outputFilePath, FileMode.Create))
-            {
-                file.DataStream.CopyTo(outputStream);
             }
         }
 

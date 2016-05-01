@@ -38,7 +38,7 @@ namespace BinderTool.Core
             cipher.Init(false, parameters);
             return DecryptAes(inputStream, cipher, inputStream.Length);
         }
-        
+
         private static BufferedBlockCipher CreateAesEcbCipher(byte[] key)
         {
             AesEngine engine = new AesEngine();
@@ -93,32 +93,36 @@ namespace BinderTool.Core
             {
                 throw new ArgumentNullException(nameof(key));
             }
-            
+
             AsymmetricKeyParameter keyParameter = GetKeyOrDefault(key);
             RsaEngine engine = new RsaEngine();
             engine.Init(false, keyParameter);
 
-            FileStream inputStream = File.OpenRead(filePath);
             MemoryStream outputStream = new MemoryStream();
-            int inputBlockSize = engine.GetInputBlockSize();
-            int outputBlockSize = engine.GetOutputBlockSize();
-            byte[] inputBlock = new byte[inputBlockSize];
-            byte[] outputBlock = new byte[outputBlockSize];
-            int readBlockSize;
-            while ((readBlockSize = inputStream.Read(inputBlock, 0, inputBlock.Length)) > 0)
+            using (FileStream inputStream = File.OpenRead(filePath))
             {
-                outputBlock = engine.ProcessBlock(inputBlock, 0, inputBlockSize);
 
-                int requiredPadding = outputBlockSize - outputBlock.Length;
-                if (requiredPadding > 0)
+                int inputBlockSize = engine.GetInputBlockSize();
+                int outputBlockSize = engine.GetOutputBlockSize();
+                byte[] inputBlock = new byte[inputBlockSize];
+                byte[] outputBlock = new byte[outputBlockSize];
+                int readBlockSize;
+                while ((readBlockSize = inputStream.Read(inputBlock, 0, inputBlock.Length)) > 0)
                 {
-                    byte[] paddedOutputBlock = new byte[outputBlockSize];
-                    outputBlock.CopyTo(paddedOutputBlock, requiredPadding);
-                    outputBlock = paddedOutputBlock;
-                }
+                    outputBlock = engine.ProcessBlock(inputBlock, 0, inputBlockSize);
 
-                outputStream.Write(outputBlock, 0, outputBlock.Length);
+                    int requiredPadding = outputBlockSize - outputBlock.Length;
+                    if (requiredPadding > 0)
+                    {
+                        byte[] paddedOutputBlock = new byte[outputBlockSize];
+                        outputBlock.CopyTo(paddedOutputBlock, requiredPadding);
+                        outputBlock = paddedOutputBlock;
+                    }
+
+                    outputStream.Write(outputBlock, 0, outputBlock.Length);
+                }
             }
+
             outputStream.Seek(0, SeekOrigin.Begin);
             return outputStream;
         }

@@ -7,7 +7,7 @@ namespace BinderTool
 {
     public class FileNameDictionary
     {
-        private static string[] _virtualRoots = {
+        private static readonly string[] VirtualRoots = {
             @"N:\SPRJ\data\",
             @"N:\FDP\data\"
         };
@@ -106,7 +106,7 @@ namespace BinderTool
 
         public static string NormalizeFileName(string fileName)
         {
-            foreach (var virtualRoot in _virtualRoots)
+            foreach (var virtualRoot in VirtualRoots)
             {
                 if (fileName.StartsWith(virtualRoot))
                 {

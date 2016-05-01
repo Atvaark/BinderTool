@@ -47,13 +47,17 @@ namespace BinderTool.Core.Bhf4
         }
 
         public List<Bhf4Entry> Entries { get; private set; }
-        public string Version { get; set; }
 
-        public static Bhf4File ReadBhf4File(Stream inputStream)
+        public string Version { get; private set; }
+
+        public static Bhf4File OpenBhf4File(string bhf4FilePath)
         {
-            Bhf4File bhf4File = new Bhf4File();
-            bhf4File.Read(inputStream);
-            return bhf4File;
+            using (FileStream inputStream = new FileStream(bhf4FilePath, FileMode.Open))
+            {
+                Bhf4File bhf4File = new Bhf4File();
+                bhf4File.Read(inputStream);
+                return bhf4File;
+            }
         }
 
         public void Read(Stream inputStream)
@@ -98,5 +102,6 @@ namespace BinderTool.Core.Bhf4
 
             inputStream.Position = endPosition;
         }
+
     }
 }
