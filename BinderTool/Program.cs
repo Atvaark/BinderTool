@@ -88,10 +88,11 @@ namespace BinderTool
         {
             Console.WriteLine(
                 "BinderTool by Atvaark\n" +
-                "  A tool for unpacking Dark Souls III Bdt, Bhd, Dcx and Sl2 files\n" +
+                "  A tool for unpacking Dark Souls III Bdt, Bhd, Dcx, Sl2 and Tpf files\n" +
                 "Usage:\n" +
                 "  BinderTool file_path [output_path]\n" +
                 "Examples:\n" +
+                "  BinderTool data1.bhd\n" +
                 "  BinderTool data1.bhd data1");
         }
 
