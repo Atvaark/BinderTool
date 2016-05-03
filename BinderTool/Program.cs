@@ -11,7 +11,7 @@ using BinderTool.Core.Bhd5;
 using BinderTool.Core.Bhf4;
 using BinderTool.Core.Bnd4;
 using BinderTool.Core.Dcx;
-using BinderTool.Core.Regulation;
+using BinderTool.Core.Enc;
 using BinderTool.Core.Sl2;
 using BinderTool.Core.Tpf;
 
@@ -96,64 +96,13 @@ namespace BinderTool
                 "  BinderTool data1.bhd data1");
         }
 
-        private static List<string> GetArchiveNamesFromFileName(string archiveFileName)
-        {
-            List<string> archiveNames;
-            switch (archiveFileName)
-            {
-                default:
-                    archiveNames = new List<string>()
-                    {
-                        "action",
-                        "adhoc",
-                        "aiscript",
-                        "capture",
-                        "cap_dbgsaveload",
-                        "cap_debugmenu",
-                        "chr",
-                        "chranibnd",
-                        "chresd",
-                        "chresdpatch",
-                        "config",
-                        "dbgai",
-                        "debug",
-                        "event",
-                        "facegen",
-                        "font",
-                        "map",
-                        "menu",
-                        "msg",
-                        "mtd",
-                        "obj",
-                        "other",
-                        "param",
-                        "paramdef",
-                        "parampatch",
-                        "parts",
-                        "patch_sfxbnd",
-                        "regulation",
-                        "script",
-                        "sfx",
-                        "sfxbnd",
-                        "shader",
-                        "stayparamdef",
-                        "system",
-                        "temp",
-                        "testdata",
-                        "title"
-                    };
-                    break;
-            }
-            return archiveNames;
-        }
-
         private static void UnpackBdtFile(Options options)
         {
             string dictionaryPath = Path.Combine(Path.GetDirectoryName(Assembly.GetEntryAssembly().Location), "Dictionary.csv");
             FileNameDictionary dictionary = FileNameDictionary.OpenFromFile(dictionaryPath);
 
             string fileNameWithoutExtension = Path.GetFileName(options.InputPath).Replace(".bdt", "");
-            List<string> archiveNames = GetArchiveNamesFromFileName(fileNameWithoutExtension);
+            string archiveName = fileNameWithoutExtension.ToLower();
 
             using (Bdt5FileStream bdtStream = Bdt5FileStream.OpenFile(options.InputPath, FileMode.Open, FileAccess.Read))
             {
@@ -189,7 +138,7 @@ namespace BinderTool
 
                         string fileName;
                         string extension;
-                        bool fileNameFound = dictionary.TryGetFileName(entry.FileNameHash, archiveNames, out fileName);
+                        bool fileNameFound = dictionary.TryGetFileName(entry.FileNameHash, archiveName, out fileName);
                         if (fileNameFound)
                         {
                             extension = Path.GetExtension(fileName);
@@ -199,16 +148,30 @@ namespace BinderTool
                             extension = GetDataExtension(data);
                             fileName = $"{entry.FileNameHash:D10}_{fileNameWithoutExtension}{extension}";
                         }
+                        
+                        if (extension == ".enc")
+                        {
+                            byte[] decryptionKey;
+                            if (DecryptionKeys.TryGetAesFileKey(Path.GetFileName(fileName), out decryptionKey))
+                            {
+                                EncFile encFile = EncFile.ReadEncFile(data, decryptionKey);
+                                data = encFile.Data;
 
-                        // TODO: Handle .enc files (regulation:/regulation.regbnd.dcx.enc)
-                        // Example: 2084217123_Data1.bin
+                                fileName = Path.Combine(Path.GetDirectoryName(fileName), Path.GetFileNameWithoutExtension(fileName));
+                                extension = Path.GetExtension(fileName);
+                            }
+                            else
+                            {
+                                Debug.WriteLine($"No decryption key for file \'{fileName}\' found.");
+                            }
+                        }
 
                         if (extension == ".dcx")
                         {
                             DcxFile dcxFile = DcxFile.Read(data);
                             data = new MemoryStream(dcxFile.Decompress());
 
-                            fileName = Path.GetFileNameWithoutExtension(fileName);
+                            fileName = Path.Combine(Path.GetDirectoryName(fileName), Path.GetFileNameWithoutExtension(fileName));
 
                             if (fileNameFound)
                             {
@@ -400,11 +363,14 @@ namespace BinderTool
                 case "FXR\0":
                     extension = ".fxr";
                     return true;
-                case "ENFL":
-                    extension = ".edf"; // ?
+                case "ITLIMITER_INFO":
+                    extension = ".itl";
                     return true;
                 case "EVD\0":
-                    extension = ".evd"; // ?
+                    extension = ".emevd";
+                    return true;
+                case "ENFL":
+                    extension = ".edf"; // ?
                     return true;
                 case "NVMA":
                     extension = ".nvma"; // ?
@@ -417,9 +383,6 @@ namespace BinderTool
                     return true;
                 case "ONAV":
                     extension = ".onav"; // ?
-                    return true;
-                case "ITLIMITER_INFO":
-                    extension = ".itlimiterinfo"; // ?
                     return true;
                 default:
                     extension = ".bin";
@@ -474,8 +437,8 @@ namespace BinderTool
         {
             using (FileStream inputStream = new FileStream(options.InputPath, FileMode.Open))
             {
-                RegulationFile encryptedRegulationFile = RegulationFile.ReadRegulationFile(inputStream, DecryptionKeys.RegulationFileKey);
-                DcxFile compressedRegulationFile = DcxFile.Read(new MemoryStream(encryptedRegulationFile.DecryptData()));
+                EncFile encryptedFile = EncFile.ReadEncFile(inputStream, DecryptionKeys.RegulationFileKey);
+                DcxFile compressedRegulationFile = DcxFile.Read(encryptedFile.Data);
                 UnpackBndFile(new MemoryStream(compressedRegulationFile.Decompress()), options.OutputPath);
             }
         }
@@ -534,8 +497,7 @@ namespace BinderTool
                     {
                         DcxFile dcxFile = DcxFile.Read(data);
                         data = new MemoryStream(dcxFile.Decompress());
-
-                        fileName = Path.GetFileNameWithoutExtension(fileName);
+                        fileName = Path.Combine(Path.GetDirectoryName(fileName), Path.GetFileNameWithoutExtension(fileName));
                     }
 
                     string outputFilePath = Path.Combine(options.OutputPath, fileName);
@@ -570,7 +532,7 @@ namespace BinderTool
         private static MemoryStream DecryptBhdFile(string filePath)
         {
             string fileName = Path.GetFileName(filePath);
-            string key = DecryptionKeys.GetFileKey(fileName);
+            string key = DecryptionKeys.GetRsaFileKey(fileName);
             return CryptographyUtility.DecryptRsa(filePath, key);
         }
     }

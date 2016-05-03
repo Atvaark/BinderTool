@@ -64,10 +64,10 @@
     <Compile Include="Dcx\DcxCompression.cs" />
     <Compile Include="Dcx\DcxFile.cs" />
     <Compile Include="Dcx\DeflateCompression.cs" />
+    <Compile Include="Enc\EncFile.cs" />
     <Compile Include="ExtensionMethods.cs" />
     <Compile Include="IO\BigEndianBinaryReader.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="Regulation\RegulationFile.cs" />
     <Compile Include="Sl2\Sl2File.cs" />
     <Compile Include="Sl2\Sl2UserData.cs" />
     <Compile Include="Tpf\TpfFile.cs" />
