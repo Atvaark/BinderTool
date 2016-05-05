@@ -6,11 +6,11 @@ namespace BinderTool
 {
     internal class Options
     {
-        public FileType InputType { get; set; }
+        public FileType InputType { get; private set; }
 
-        public string InputPath { get; set; }
+        public string InputPath { get; private set; }
 
-        public string OutputPath { get; set; }
+        public string OutputPath { get; private set; }
 
         internal static Options Parse(string[] args)
         {
@@ -61,7 +61,7 @@ namespace BinderTool
 
             // file.dcx
             // file.bnd.dcx
-            if (fileName.EndsWith("dcx", StringComparison.InvariantCultureIgnoreCase))
+            if (fileName.EndsWith(".dcx", StringComparison.InvariantCultureIgnoreCase))
             {
                 return FileType.Dcx;
             }
@@ -86,12 +86,12 @@ namespace BinderTool
             }
 
             // DS30000.sl2
-            if (fileName.EndsWith("sl2", StringComparison.CurrentCultureIgnoreCase))
+            if (fileName.EndsWith(".sl2", StringComparison.CurrentCultureIgnoreCase))
             {
                 return FileType.Savegame;
             }
 
-            if (fileName == @"Data0.bdt")
+            if (fileName == "Data0.bdt")
             {
                 return FileType.Regulation;
             }
@@ -106,12 +106,12 @@ namespace BinderTool
                 return FileType.EncryptedBhd;
             }
 
-            if (fileName.EndsWith("bdt", StringComparison.InvariantCultureIgnoreCase))
+            if (fileName.EndsWith(".bdt", StringComparison.InvariantCultureIgnoreCase))
             {
                 return FileType.Bdt;
             }
 
-            if (fileName.EndsWith("bhd", StringComparison.InvariantCultureIgnoreCase))
+            if (fileName.EndsWith(".bhd", StringComparison.InvariantCultureIgnoreCase))
             {
                 return FileType.Bhd;
             }

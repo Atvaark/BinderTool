@@ -12,8 +12,6 @@ namespace BinderTool.Core.Bdt5
             _inputStream = inputStream;
         }
 
-        public long Length => _inputStream.Length;
-
         public MemoryStream Read(long fileOffset, long fileSize)
         {
             if (fileOffset + fileSize > _inputStream.Length)

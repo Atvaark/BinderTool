@@ -105,11 +105,9 @@ namespace BinderTool.Core
                 int inputBlockSize = engine.GetInputBlockSize();
                 int outputBlockSize = engine.GetOutputBlockSize();
                 byte[] inputBlock = new byte[inputBlockSize];
-                byte[] outputBlock = new byte[outputBlockSize];
-                int readBlockSize;
-                while ((readBlockSize = inputStream.Read(inputBlock, 0, inputBlock.Length)) > 0)
+                while (inputStream.Read(inputBlock, 0, inputBlock.Length) > 0)
                 {
-                    outputBlock = engine.ProcessBlock(inputBlock, 0, inputBlockSize);
+                    byte[] outputBlock = engine.ProcessBlock(inputBlock, 0, inputBlockSize);
 
                     int requiredPadding = outputBlockSize - outputBlock.Length;
                     if (requiredPadding > 0)

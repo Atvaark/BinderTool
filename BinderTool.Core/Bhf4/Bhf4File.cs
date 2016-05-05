@@ -2,7 +2,6 @@
 using System.Diagnostics;
 using System.IO;
 using System.Text;
-using BinderTool.Core.IO;
 
 namespace BinderTool.Core.Bhf4
 {

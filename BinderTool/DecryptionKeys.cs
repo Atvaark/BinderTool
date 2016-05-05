@@ -7,6 +7,8 @@ namespace BinderTool
     {
         private static readonly Dictionary<string, string> RsaKeyDictionary;
 
+        private static readonly Dictionary<string, byte[]> AesKeyDictionary;
+
         static DecryptionKeys()
         {
             RsaKeyDictionary = new Dictionary<string, string>
@@ -23,12 +25,10 @@ namespace BinderTool
                 { "regulation.regbnd.dcx.enc", RegulationFileKey }
             };
         }
-
-        private static readonly Dictionary<string, byte[]> AesKeyDictionary;
-
-        public static string GetRsaFileKey(string file)
+        
+        public static bool TryGetRsaFileKey(string file, out string key)
         {
-            return RsaKeyDictionary[file];
+            return RsaKeyDictionary.TryGetValue(file, out key);
         }
 
         public static bool TryGetAesFileKey(string file, out byte[] key)

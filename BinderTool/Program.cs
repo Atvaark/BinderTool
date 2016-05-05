@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Reflection;
@@ -43,6 +42,7 @@ namespace BinderTool
             {
                 // These files have a single output file. 
                 case FileType.EncryptedBhd:
+                case FileType.Bhd:
                 case FileType.Dcx:
                     break;
                 default:
@@ -148,7 +148,7 @@ namespace BinderTool
                             extension = GetDataExtension(data);
                             fileName = $"{entry.FileNameHash:D10}_{fileNameWithoutExtension}{extension}";
                         }
-                        
+
                         if (extension == ".enc")
                         {
                             byte[] decryptionKey;
@@ -480,7 +480,7 @@ namespace BinderTool
                     hash += 132;
                     split[0] = hash.ToString("D10");
                     string bdfDirectoryPath = Path.GetDirectoryName(options.InputPath);
-                    bhf4FilePath = Path.Combine(bdfDirectoryPath, String.Join("_", split) + ".bhd");
+                    bhf4FilePath = Path.Combine(bdfDirectoryPath, string.Join("_", split) + ".bhd");
                 }
             }
 
@@ -532,7 +532,12 @@ namespace BinderTool
         private static MemoryStream DecryptBhdFile(string filePath)
         {
             string fileName = Path.GetFileName(filePath);
-            string key = DecryptionKeys.GetRsaFileKey(fileName);
+            string key;
+            if (!DecryptionKeys.TryGetRsaFileKey(fileName, out key))
+            {
+                throw new ApplicationException($"Missing decryption key for file \'{fileName}\'");
+            }
+
             return CryptographyUtility.DecryptRsa(filePath, key);
         }
     }
