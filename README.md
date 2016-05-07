@@ -13,6 +13,16 @@ If you are looking for the Dark Souls II release check out the [v0.3](https://gi
   - [ ] Extract file names dynamically from the application
   - *Hooking the hash function and logging all the valid files is probably the right way. Unfortunately the function is inlined at lots of locations in the application. (Search for "imul 37")* 
 
+### Dictionary Progress
+
+| archive   | found names | total names | found percentage |
+| :---      | ---:        | ---:        | ---:             |
+| data1     |         671 |        2110 |           31,80% |
+| data2     |         522 |        2140 |           24,39% |
+| data3     |         481 |         673 |           71,47% |
+| data4     |         476 |         951 |           50,05% |
+| data5     |        3664 |        6755 |           54,24% |
+| **total** |    **5814** |   **12629** |       **46,04%** |
 
 ## Requirements
 ```
