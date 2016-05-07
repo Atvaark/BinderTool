@@ -17,12 +17,12 @@ If you are looking for the Dark Souls II release check out the [v0.3](https://gi
 
 | archive   | found names | total names | found percentage |
 | :---      | ---:        | ---:        | ---:             |
-| data1     |         671 |        2110 |           31,80% |
-| data2     |         557 |        2140 |           26,03% |
-| data3     |         561 |         673 |           83,36% |
-| data4     |         625 |         951 |           65,72% |
-| data5     |        5816 |        6755 |           86,10% |
-| **total** |    **8230** |   **12629** |       **65,17%** |
+| data1     |         775 |        2110 |           36,73% |
+| data2     |         565 |        2140 |           26,40% |
+| data3     |         580 |         673 |           86,18% |
+| data4     |         651 |         951 |           68,45% |
+| data5     |        5983 |        6755 |           88,57% |
+| **total** |    **8230** |   **12629** |       **67,73%** |
 
 ## Requirements
 ```
