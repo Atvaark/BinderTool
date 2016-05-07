@@ -40,5 +40,14 @@ namespace BinderTool.Core
         {
             reader.BaseStream.Seek(offset, origin);
         }
+
+        internal static void Align(this BinaryReader reader, int alignment)
+        {
+            long alignmentRequired = reader.BaseStream.Position % alignment;
+            if (alignmentRequired > 0)
+            {
+                reader.BaseStream.Position += alignment - alignmentRequired;
+            }
+        }
     }
 }

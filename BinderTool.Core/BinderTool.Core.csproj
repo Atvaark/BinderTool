@@ -65,6 +65,7 @@
     <Compile Include="Dcx\DcxFile.cs" />
     <Compile Include="Dcx\DeflateCompression.cs" />
     <Compile Include="Enc\EncFile.cs" />
+    <Compile Include="Enfl\EntryFileListFile.cs" />
     <Compile Include="ExtensionMethods.cs" />
     <Compile Include="IO\BigEndianBinaryReader.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
