@@ -250,7 +250,7 @@ namespace BinderTool
                 return extension;
             }
 
-            Debug.WriteLine($"Unknown signature: '{BitConverter.ToString(Encoding.ASCII.GetBytes(signature)).Replace("-", " ")}'");
+            //Debug.WriteLine($"Unknown signature: '{BitConverter.ToString(Encoding.ASCII.GetBytes(signature)).Replace("-", " ")}'");
             return ".bin";
         }
 
@@ -316,7 +316,7 @@ namespace BinderTool
                     extension = ".breakobj";
                     return true;
                 case "filt":
-                    extension = ".fltparam";
+                    extension = ".gparam";
                     return true;
                 case "VSDF":
                     extension = ".vsd";
@@ -370,7 +370,7 @@ namespace BinderTool
                     extension = ".emevd";
                     return true;
                 case "ENFL":
-                    extension = ".edf"; // ?
+                    extension = ".entryfilelist";
                     return true;
                 case "NVMA":
                     extension = ".nvma"; // ?
@@ -415,6 +415,7 @@ namespace BinderTool
             {
                 string fileName = FileNameDictionary.NormalizeFileName(entry.FileName);
                 string outputFilePath = Path.Combine(outputPath, fileName);
+
                 Directory.CreateDirectory(Path.GetDirectoryName(outputFilePath));
                 File.WriteAllBytes(outputFilePath, entry.EntryData);
             }

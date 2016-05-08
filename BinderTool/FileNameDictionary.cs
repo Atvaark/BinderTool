@@ -26,8 +26,11 @@ namespace BinderTool
             "debugdata",
             "dbgai",
             "parampatch",
+
             "chrhkx",
-            "chrflver"
+            "chrflver",
+            "tpfbnd",
+            "hkxbnd",
         };
 
         /// <example>
@@ -50,6 +53,7 @@ namespace BinderTool
                 { "cap_memdump", "capture:/memdump" },
                 { "cap_param", "capture:/param" },
                 { "cap_screenshot", "capture:/screenshot" },
+
                 { "title", "data1:/" },
                 { "event", "data1:/event" },
                 { "facegen", "data1:/facegen" },
@@ -81,7 +85,9 @@ namespace BinderTool
                 { "sound", "data1:/sound" },
                 { "stayparamdef", "data1:/stayparamdef" },
                 { "testdata", "data1:/testdata" },
+
                 { "parts", "data2:/parts" },
+
                 { "action", "data3:/action" },
                 { "actscript", "data3:/action/script" },
                 { "chr", "data3:/chr" },
@@ -91,8 +97,10 @@ namespace BinderTool
                 { "chresd", "data3:/chr" },
                 { "chresdpatch", "data3:/chr" },
                 { "chrtpf", "data3:/chr" },
+
                 { "obj", "data4:/obj" },
                 { "objbnd", "data4:/obj" },
+
                 { "map", "data5:/map" },
                 { "maphkx", "data5:/map" },
                 { "maptpf", "data5:/map" },
@@ -101,6 +109,7 @@ namespace BinderTool
                 { "entryfilelist", "data5:/map/entryfilelist" },
                 { "mapstudio", "data5:/map/mapstudio" },
                 { "onav", "data5:/map/onav" },
+
                 { "adhoc", "debugdata:/adhoc" }
             };
 
@@ -172,7 +181,7 @@ namespace BinderTool
             }
 
             string hashablePath = "/" + fileName;
-            ulong hash = GetHashCode(hashablePath);
+            uint hash = GetHashCode(hashablePath);
 
             Dictionary<ulong, List<string>> archiveDictionary;
             if (_dictionary.TryGetValue(archiveName, out archiveDictionary) == false)

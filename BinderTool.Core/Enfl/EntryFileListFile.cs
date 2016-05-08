@@ -77,8 +77,6 @@ namespace BinderTool.Core.Enfl
             for (int i = 0; i < count2; i++)
             {
                 array2[i].EntryFileName = reader.ReadNullTerminatedString();
-                Debug.WriteLine(array2[i].Unknown1 + "\t" + array2[i].Unknown2 + "\t" + array2[i].EntryFileName);
-
             }
         }
 
