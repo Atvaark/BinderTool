@@ -401,7 +401,7 @@ namespace BinderTool
 
         private static void UnpackBndFile(Options options)
         {
-            using (FileStream inputStream = new FileStream(options.InputPath, FileMode.Open))
+            using (FileStream inputStream = new FileStream(options.InputPath, FileMode.Open, FileAccess.Read))
             {
                 UnpackBndFile(inputStream, options.OutputPath);
             }
@@ -423,7 +423,7 @@ namespace BinderTool
 
         private static void UnpackSl2File(Options options)
         {
-            using (FileStream inputStream = new FileStream(options.InputPath, FileMode.Open))
+            using (FileStream inputStream = new FileStream(options.InputPath, FileMode.Open, FileAccess.Read))
             {
                 Sl2File sl2File = Sl2File.ReadSl2File(inputStream, DecryptionKeys.UserDataKey);
                 foreach (var userData in sl2File.UserData)
@@ -436,7 +436,7 @@ namespace BinderTool
 
         private static void UnpackRegulationFile(Options options)
         {
-            using (FileStream inputStream = new FileStream(options.InputPath, FileMode.Open))
+            using (FileStream inputStream = new FileStream(options.InputPath, FileMode.Open, FileAccess.Read))
             {
                 EncFile encryptedFile = EncFile.ReadEncFile(inputStream, DecryptionKeys.RegulationFileKey);
                 DcxFile compressedRegulationFile = DcxFile.Read(encryptedFile.Data);
@@ -450,7 +450,7 @@ namespace BinderTool
             string outputFilePath = options.OutputPath;
             bool hasExtension = Path.GetExtension(unpackedFileName) != "";
 
-            using (FileStream inputStream = new FileStream(options.InputPath, FileMode.Open))
+            using (FileStream inputStream = new FileStream(options.InputPath, FileMode.Open, FileAccess.Read))
             {
                 DcxFile dcxFile = DcxFile.Read(inputStream);
                 byte[] decompressedData = dcxFile.Decompress();
@@ -470,7 +470,9 @@ namespace BinderTool
 
         private static void UnpackBdf4File(Options options)
         {
-            string bhf4FilePath = Path.ChangeExtension(options.InputPath, "bhd");
+            string bdfDirectoryPath = Path.GetDirectoryName(options.InputPath);
+            string bhf4Extension = Path.GetExtension(options.InputPath).Replace("bdt", "bhd");
+            string bhf4FilePath = Path.Combine(bdfDirectoryPath, Path.GetFileNameWithoutExtension(options.InputPath) + bhf4Extension);
             if (!File.Exists(bhf4FilePath))
             {
                 // HACK: Adding 132 to a hash of a text that ends with XXX.bdt will give you the hash of XXX.bhd.
@@ -480,7 +482,6 @@ namespace BinderTool
                 {
                     hash += 132;
                     split[0] = hash.ToString("D10");
-                    string bdfDirectoryPath = Path.GetDirectoryName(options.InputPath);
                     bhf4FilePath = Path.Combine(bdfDirectoryPath, string.Join("_", split) + ".bhd");
                 }
             }
@@ -503,17 +504,14 @@ namespace BinderTool
 
                     string outputFilePath = Path.Combine(options.OutputPath, fileName);
                     Directory.CreateDirectory(Path.GetDirectoryName(outputFilePath));
-                    using (FileStream outputStream = new FileStream(outputFilePath, FileMode.Create))
-                    {
-                        data.CopyTo(outputStream);
-                    }
+                    File.WriteAllBytes(outputFilePath, data.ToArray());
                 }
             }
         }
 
         private static void UnpackTpfFile(Options options)
         {
-            using (FileStream inputStream = new FileStream(options.InputPath, FileMode.Open))
+            using (FileStream inputStream = new FileStream(options.InputPath, FileMode.Open, FileAccess.Read))
             {
                 TpfFile tpfFile = TpfFile.OpenTpfFile(inputStream);
                 foreach (var entry in tpfFile.Entries)

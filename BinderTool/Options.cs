@@ -106,12 +106,18 @@ namespace BinderTool
                 return FileType.EncryptedBhd;
             }
 
-            if (fileName.EndsWith(".bdt", StringComparison.InvariantCultureIgnoreCase))
+            // file.bdt
+            // file.hkxbdt
+            // file.tpfbdt
+            if (fileName.EndsWith("bdt", StringComparison.InvariantCultureIgnoreCase))
             {
                 return FileType.Bdt;
             }
 
-            if (fileName.EndsWith(".bhd", StringComparison.InvariantCultureIgnoreCase))
+            // file.bhd
+            // file.hkxbhd
+            // file.tpfbhd
+            if (fileName.EndsWith("bhd", StringComparison.InvariantCultureIgnoreCase))
             {
                 return FileType.Bhd;
             }
