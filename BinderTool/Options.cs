@@ -48,6 +48,7 @@ namespace BinderTool
                         options.OutputPath += "_decrypted.bhd";
                         break;
                     case FileType.Dcx:
+                    case FileType.Fmg:
                         break;
                 }
             }
@@ -125,6 +126,16 @@ namespace BinderTool
             if (fileName.EndsWith(".tpf", StringComparison.InvariantCultureIgnoreCase))
             {
                 return FileType.Tpf;
+            }
+
+            if (fileName.EndsWith(".param", StringComparison.InvariantCultureIgnoreCase))
+            {
+                return FileType.Param;
+            }
+
+            if (fileName.EndsWith(".fmg", StringComparison.InvariantCultureIgnoreCase))
+            {
+                return FileType.Fmg;
             }
 
             return FileType.Unknown;

@@ -80,8 +80,6 @@ namespace BinderTool
                 { "shader", "data1:/shader" },
                 { "fmod", "data1:/sound" },
                 { "sndchr", "data1:/sound" },
-                { "sndmap", "data1:/sound" },
-                { "sndremo", "data1:/sound" },
                 { "sound", "data1:/sound" },
                 { "stayparamdef", "data1:/stayparamdef" },
                 { "testdata", "data1:/testdata" },
@@ -109,6 +107,8 @@ namespace BinderTool
                 { "entryfilelist", "data5:/map/entryfilelist" },
                 { "mapstudio", "data5:/map/mapstudio" },
                 { "onav", "data5:/map/onav" },
+                { "sndmap", "data5:/sound" },
+                { "sndremo", "data5:/sound" }, // TODO: Check if the sndremo files are in data5
 
                 { "adhoc", "debugdata:/adhoc" }
             };

@@ -11,6 +11,8 @@ using BinderTool.Core.Bhf4;
 using BinderTool.Core.Bnd4;
 using BinderTool.Core.Dcx;
 using BinderTool.Core.Enc;
+using BinderTool.Core.Fmg;
+using BinderTool.Core.Param;
 using BinderTool.Core.Sl2;
 using BinderTool.Core.Tpf;
 
@@ -44,6 +46,7 @@ namespace BinderTool
                 case FileType.EncryptedBhd:
                 case FileType.Bhd:
                 case FileType.Dcx:
+                case FileType.Fmg:
                     break;
                 default:
                     Directory.CreateDirectory(options.OutputPath);
@@ -79,6 +82,12 @@ namespace BinderTool
                 case FileType.Tpf:
                     UnpackTpfFile(options);
                     break;
+                case FileType.Param:
+                    UnpackParamFile(options);
+                    break;
+                case FileType.Fmg:
+                    UnpackFmgFile(options);
+                    break;
                 default:
                     throw new ArgumentOutOfRangeException($"Unable to handle type '{options.InputType}'");
             }
@@ -88,12 +97,12 @@ namespace BinderTool
         {
             Console.WriteLine(
                 "BinderTool by Atvaark\n" +
-                "  A tool for unpacking Dark Souls III Bdt, Bhd, Dcx, Sl2 and Tpf files\n" +
+                "  A tool for unpacking Dark Souls III Bdt, Bhd, Dcx, Sl2, Tpf, Param and Fmg files\n" +
                 "Usage:\n" +
                 "  BinderTool file_path [output_path]\n" +
                 "Examples:\n" +
-                "  BinderTool data1.bhd\n" +
-                "  BinderTool data1.bhd data1");
+                "  BinderTool data1.bdt\n" +
+                "  BinderTool data1.bdt data1");
         }
 
         private static void UnpackBdtFile(Options options)
@@ -538,6 +547,42 @@ namespace BinderTool
             }
 
             return CryptographyUtility.DecryptRsa(filePath, key);
+        }
+
+        private static void UnpackParamFile(Options options)
+        {
+            using (FileStream inputStream = new FileStream(options.InputPath, FileMode.Open, FileAccess.Read))
+            {
+                ParamFile paramFile = ParamFile.ReadParamFile(inputStream);
+                foreach (var entry in paramFile.Entries)
+                {
+                    string entryName = $"{entry.Id:D10}.{paramFile.StructName}";
+                    string outputFilePath = Path.Combine(options.OutputPath, entryName);
+                    Directory.CreateDirectory(Path.GetDirectoryName(outputFilePath));
+                    File.WriteAllBytes(outputFilePath, entry.Data);
+                }
+            }
+        }
+
+        private static void UnpackFmgFile(Options options)
+        {
+            using (FileStream inputStream = new FileStream(options.InputPath, FileMode.Open, FileAccess.Read))
+            {
+                FmgFile fmgFile = FmgFile.ReadFmgFile(inputStream);
+
+                StringBuilder builder = new StringBuilder();
+                foreach (var entry in fmgFile.Entries)
+                {
+                    string value = entry.Value
+                        .Replace("\r", "\\r")
+                        .Replace("\n", "\\n")
+                        .Replace("\t", "\\t");
+                    builder.AppendLine($"{entry.Id}\t{value}");
+                }
+
+                string outputPath = options.OutputPath + ".txt";
+                File.WriteAllText(outputPath, builder.ToString());
+            }
         }
     }
 }

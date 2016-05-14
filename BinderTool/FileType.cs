@@ -11,6 +11,8 @@
         Bhd,
         Bnd,
         Savegame,
-        Tpf
+        Tpf,
+        Param,
+        Fmg
     }
 }

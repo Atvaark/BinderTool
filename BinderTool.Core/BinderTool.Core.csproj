@@ -67,7 +67,12 @@
     <Compile Include="Enc\EncFile.cs" />
     <Compile Include="Enfl\EntryFileListFile.cs" />
     <Compile Include="ExtensionMethods.cs" />
+    <Compile Include="Fmg\FmgFile.cs" />
+    <Compile Include="Fmg\FmgFileEntry.cs" />
+    <Compile Include="Fmg\FmgIdRange.cs" />
     <Compile Include="IO\BigEndianBinaryReader.cs" />
+    <Compile Include="Param\ParamEntry.cs" />
+    <Compile Include="Param\ParamFile.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Sl2\Sl2File.cs" />
     <Compile Include="Sl2\Sl2UserData.cs" />
