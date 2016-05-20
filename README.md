@@ -47,7 +47,7 @@ Unpacking an unencrypted bdt file. This requires the corresponding bhd file to b
 BinderTool t10_23_00_00.tpfbdt
 ```
 
-Unpacking an encrypted bhd file. This requires the corresponding KeyCode.pem files to be in the same folder.
+Unpacking an encrypted bhd file. This will only work for files with known decryption keys such as Data1.bhd-Data5.bhd.
 ```
 BinderTool Data1.bhd
 ```
