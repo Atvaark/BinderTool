@@ -97,12 +97,12 @@ namespace BinderTool
                 return FileType.Regulation;
             }
 
-            if (Regex.IsMatch(fileName, @"^Data\d\.bdt$", RegexOptions.IgnoreCase))
+            if (Regex.IsMatch(fileName, @"^(?:Data|DLC)\d\.bdt$", RegexOptions.IgnoreCase))
             {
                 return FileType.EncryptedBdt;
             }
 
-            if (Regex.IsMatch(fileName, @"^Data\d\.bhd$", RegexOptions.IgnoreCase))
+            if (Regex.IsMatch(fileName, @"^(?:Data|DLC)\d\.bhd$", RegexOptions.IgnoreCase))
             {
                 return FileType.EncryptedBhd;
             }

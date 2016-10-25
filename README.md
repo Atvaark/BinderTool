@@ -5,14 +5,6 @@ Binaries can be downloaded under [releases](https://github.com/Atvaark/BinderToo
 
 If you are looking for the Dark Souls II release check out the [v0.3](https://github.com/Atvaark/BinderTool/tree/v0.3) branch.
 
-## Progress
-- [X] Fix decrypting and unpacking DS III files.
-- [ ] Create a dictionary
-  - [x] Extract file names statically from the application
-  - [ ] Extract file names statically from the archive files
-  - [ ] Extract file names dynamically from the application
-  - *Hooking the hash function and logging all the valid files is probably the right way. Unfortunately the function is inlined at lots of locations in the application. (Search for "imul 37")* 
-
 ### Dictionary Progress
 
 | archive   | found names | total names | found percentage |
@@ -22,7 +14,8 @@ If you are looking for the Dark Souls II release check out the [v0.3](https://gi
 | data3     |         671 |         673 |           99,70% |
 | data4     |         951 |         951 |          100,00% |
 | data5     |        6301 |        6755 |           93,28% |
-| **total** |   **12130** |   **12629** |       **96,05%** |
+| dlc1      |           0 |         775 |               0% |
+| **total** |   **12130** |   **13404** |          **90%** |
 
 ## Requirements
 ```
@@ -40,6 +33,7 @@ If no output folder path is specified then the files are unpacked in a folder ca
 Unpacking an encrypted bdt file. This requires the corresponding .bhd files to be in the same folder.
 ```
 BinderTool Data1.bdt
+BinderTool DLC1.bdt
 ```
 
 Unpacking an unencrypted bdt file. This requires the corresponding bhd file to be in the same folder.
@@ -50,6 +44,7 @@ BinderTool t10_23_00_00.tpfbdt
 Unpacking an encrypted bhd file. This will only work for files with known decryption keys such as Data1.bhd-Data5.bhd.
 ```
 BinderTool Data1.bhd
+BinderTool DLC1.bhd
 ```
 
 Unpacking a bnd file
