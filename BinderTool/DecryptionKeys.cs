@@ -19,6 +19,7 @@ namespace BinderTool
                 { "Data4.bhd", Data4Key },
                 { "Data5.bhd", Data5Key },
                 { "DLC1.bhd", Dlc1Key },
+                { "DLC2.bhd", Dlc2Key },
             };
 
             AesKeyDictionary = new Dictionary<string, byte[]>()
@@ -123,6 +124,16 @@ QtX5/QJkVQtj8M4a0FIfdtE3wkxaKtP6IXWIy4DesSdGWONVWLfi2eq62A5ts5MF
 qMoSV3XjTYuCgXqZQ6eOE+NIBQRqpZxLNFSzbJwWXpAg2kBMkpy5+ywOByjmWzUw
 jnIFl1T17R8DpTU/93ojx+/q1p+b1o5is5KcoP7QwjOqzjHJH8bTytzRbgmRcDMW
 3ahxgI070d45TMXK2YwRzI6/JbM1P29anQIEFezyYw==
+-----END RSA PUBLIC KEY-----";
+
+        private const string Dlc2Key =
+@"-----BEGIN RSA PUBLIC KEY-----
+MIIBCwKCAQEAtCXU9a/GBMVoqtpQox9p0/5sWPaIvDp8avLFnIBhN7vkgTwulZHi
+u64vZAiUAdVeFX4F+Qtk+5ivK488Mu2CzAMJcz5RvyMQJtOQXuDDqzIv21Tr5zuu
+sswoErHxxP8TZNxkHm7Ram7Oqtn7LQnMTYxsBgZZ34yJkRtAmZnGoCu5YaUR5euk
+8lF75idi97ssczUNV212tLzIMa1YOV7sxOb7+gc0VTIqs3pa+OXLPI/bMfwUc/KN
+jur5aLDDntQHGx5zuNtc78gMGwlmPqDhgTusKPO4VyKvoL0kITYvukoXJATaa1HI
+WVUjhLm+/uj8r8PNgolerDeS+8FM5Bpe9QIEHwCZLw==
 -----END RSA PUBLIC KEY-----";
     }
 }
