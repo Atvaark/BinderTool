@@ -15,8 +15,8 @@ If you are looking for the Dark Souls II release check out the [v0.3](https://gi
 | data4     |         951 |         951 |          100,00% |
 | data5     |        6301 |        6755 |           93,28% |
 | dlc1      |           0 |         775 |               0% |
-| dlc2      |           0 |           ? |               0% |
-| **total** |   **12130** |   **13404** |          **90%** |
+| dlc2      |           0 |        1264 |               0% |
+| **total** |   **12130** |   **14668** |          **82%** |
 
 ## Requirements
 ```
