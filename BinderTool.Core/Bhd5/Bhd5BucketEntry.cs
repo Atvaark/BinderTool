@@ -17,12 +17,9 @@ namespace BinderTool.Core.Bhd5
             BinaryReader reader = new BinaryReader(inputStream, Encoding.UTF8, true);
             result.FileNameHash = reader.ReadUInt32();
             result.FileSize = reader.ReadInt32();
-            result.FileOffset = reader.ReadUInt32();
-            reader.Skip(4);
-            int saltedHashOffset = reader.ReadInt32();
-            reader.Skip(4);
-            int aesKeyOffset = reader.ReadInt32();
-            reader.Skip(4);
+            result.FileOffset = reader.ReadInt64();
+            long saltedHashOffset = reader.ReadInt64();
+            long aesKeyOffset = reader.ReadInt64();
 
             if (saltedHashOffset != 0)
             {

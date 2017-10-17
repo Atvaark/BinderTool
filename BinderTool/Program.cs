@@ -173,11 +173,21 @@ namespace BinderTool
                 case "DCX\0":
                     extension = ".dcx";
                     return true;
+                case "DDS ":
+                    extension = ".dds";
+                    return true;
                 case "TAE ":
                     extension = ".tae";
                     return true;
+                case "FSB5":
+                    extension = ".fsb";
+                    return true;
+                case "fsSL":
                 case "fSSL":
                     extension = ".fssl";
+                    return true;
+                case "MSB ":
+                    extension = ".msb";
                     return true;
                 case "TPF\0":
                     extension = ".tpf";

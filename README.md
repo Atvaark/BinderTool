@@ -3,7 +3,7 @@ A Dark Souls II bdt, bhd, bnd, dcx and sl2 unpacking tool
 
 ## Requirements
 ```
-Microsoft .NET Framework 4.5
+Microsoft .NET Framework 4.5.2
 ```
 
 ## Usage
