@@ -3,6 +3,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Reflection;
 using System.Text;
+using System.Text.RegularExpressions;
 using BinderTool.Core;
 using BinderTool.Core.Bdf4;
 using BinderTool.Core.Bdt5;
@@ -115,7 +116,12 @@ namespace BinderTool
 
             using (Bdt5FileStream bdtStream = Bdt5FileStream.OpenFile(options.InputPath, FileMode.Open, FileAccess.Read))
             {
-                Bhd5File bhdFile = Bhd5File.Read(DecryptBhdFile(Path.ChangeExtension(options.InputPath, "bhd")));
+                Bhd5File bhdFile = Bhd5File.Read(
+                    inputStream: DecryptBhdFile(
+                        filePath: Path.ChangeExtension(options.InputPath, "bhd"),
+                        version: options.InputVersion),
+                    version: options.InputVersion
+                    );
                 foreach (var bucket in bhdFile.GetBuckets())
                 {
                     foreach (var entry in bucket.GetEntries())
@@ -126,7 +132,7 @@ namespace BinderTool
                             long fileSize;
                             if (!TryReadFileSize(entry, bdtStream, out fileSize))
                             {
-                                Console.WriteLine("Unable to determine the length of file '{0:D10}'", entry.FileNameHash);
+                                Console.WriteLine($"Unable to determine the length of file '{entry.FileNameHash:D10}'");
                                 continue;
                             }
 
@@ -308,11 +314,17 @@ namespace BinderTool
                 case "DCX\0":
                     extension = ".dcx";
                     return true;
+                case "DDS ":
+                    extension = ".dds";
+                    return true;
                 case "TAE ":
                     extension = ".tae";
                     return true;
-                case "fSSL":
+                case "FSB5":
+                    extension = ".fsb";
+                    return true;
                 case "fsSL":
+                case "fSSL":
                     extension = ".esd";
                     return true;
                 case "TPF\0":
@@ -339,14 +351,8 @@ namespace BinderTool
                 case "\x1BLua":
                     extension = ".lua"; // or .hks
                     return true;
-                case "DDS ":
-                    extension = ".dds";
-                    return true;
                 case "RIFF":
                     extension = ".fev";
-                    return true;
-                case "FSB5":
-                    extension = ".fsb";
                     return true;
                 case "GFX\v":
                     extension = ".gfx";
@@ -401,7 +407,7 @@ namespace BinderTool
 
         private static void UnpackBhdFile(Options options)
         {
-            using (var inputStream = DecryptBhdFile(options.InputPath))
+            using (var inputStream = DecryptBhdFile(options.InputPath, options.InputVersion))
             using (var outputStream = File.OpenWrite(options.OutputPath))
             {
                 inputStream.WriteTo(outputStream);
@@ -537,15 +543,31 @@ namespace BinderTool
             Console.WriteLine($"The file : \'{options.InputPath}\' is already decrypted.");
         }
 
-        private static MemoryStream DecryptBhdFile(string filePath)
+        private static MemoryStream DecryptBhdFile(string filePath, DSVersion version)
         {
-            string fileName = Path.GetFileName(filePath);
-            string key;
-            if (!DecryptionKeys.TryGetRsaFileKey(fileName, out key))
+            string fileDirectory = Path.GetDirectoryName(filePath) ?? string.Empty;
+            string fileName = Path.GetFileName(filePath) ?? string.Empty;
+            string key = null;
+            switch (version)
+            {
+                case DSVersion.DarkSouls2:
+                    string keyFileName = Regex.Replace(fileName, @"Ebl\.bhd$", "KeyCode.pem", RegexOptions.IgnoreCase);
+                    string keyFilePath = Path.Combine(fileDirectory, keyFileName);
+                    if (File.Exists(keyFilePath))
+                    {
+                        key = File.ReadAllText(keyFilePath);
+                    }
+                    break;
+                case DSVersion.DarkSouls3:
+                    DecryptionKeys.TryGetRsaFileKey(fileName, out key);
+                    break;
+            }
+
+            if (key == null)
             {
                 throw new ApplicationException($"Missing decryption key for file \'{fileName}\'");
             }
-
+            
             return CryptographyUtility.DecryptRsa(filePath, key);
         }
 

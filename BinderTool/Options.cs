@@ -1,11 +1,14 @@
 ﻿using System;
 using System.IO;
 using System.Text.RegularExpressions;
+using BinderTool.Core;
 
 namespace BinderTool
 {
     internal class Options
     {
+        public DSVersion InputVersion { get; set; }
+
         public FileType InputType { get; private set; }
 
         public string InputPath { get; private set; }
@@ -26,7 +29,9 @@ namespace BinderTool
                 throw new FormatException("Input file not found");
             }
 
-            options.InputType = GetFileType(Path.GetFileName(options.InputPath));
+            (FileType type, DSVersion version) fileType = GetFileType(Path.GetFileName(options.InputPath));
+            options.InputType = fileType.type;
+            options.InputVersion = fileType.version;
 
             if (options.InputType == FileType.Unknown)
             {
@@ -56,15 +61,18 @@ namespace BinderTool
             return options;
         }
 
-        private static FileType GetFileType(string fileName)
+        private static (FileType, DSVersion) GetFileType(string fileName)
         {
-            if (fileName == null) throw new ArgumentNullException(nameof(fileName));
+            if (fileName == null)
+            {
+                throw new ArgumentNullException(nameof(fileName));
+            }
 
             // file.dcx
             // file.bnd.dcx
             if (fileName.EndsWith(".dcx", StringComparison.InvariantCultureIgnoreCase))
             {
-                return FileType.Dcx;
+                return (FileType.Dcx, DSVersion.Common);
             }
 
             // .anibnd
@@ -83,28 +91,38 @@ namespace BinderTool
                 || fileName.EndsWith("bdle", StringComparison.InvariantCultureIgnoreCase)
                 || fileName.EndsWith("bdledebug", StringComparison.InvariantCultureIgnoreCase))
             {
-                return FileType.Bnd;
+                return (FileType.Bnd, DSVersion.Common);
             }
 
             // DS30000.sl2
             if (fileName.EndsWith(".sl2", StringComparison.CurrentCultureIgnoreCase))
             {
-                return FileType.Savegame;
+                return (FileType.Savegame, DSVersion.Common);
             }
 
             if (fileName == "Data0.bdt")
             {
-                return FileType.Regulation;
+                return (FileType.Regulation, DSVersion.Common);
             }
 
             if (Regex.IsMatch(fileName, @"^(?:Data|DLC)\d\.bdt$", RegexOptions.IgnoreCase))
             {
-                return FileType.EncryptedBdt;
+                return (FileType.EncryptedBdt, DSVersion.DarkSouls3);
             }
 
-            if (Regex.IsMatch(fileName, @"^(?:Data|DLC)\d\.bhd$", RegexOptions.IgnoreCase))
+            if (Regex.IsMatch(fileName, @"^[^\W_]+Ebl\.bdt$", RegexOptions.IgnoreCase))
             {
-                return FileType.EncryptedBhd;
+                return (FileType.EncryptedBdt, DSVersion.DarkSouls2);
+            }
+
+            if (Regex.IsMatch(fileName, @"^(?:Data|DLC|)\d\.bhd$", RegexOptions.IgnoreCase))
+            {
+                return (FileType.EncryptedBhd, DSVersion.DarkSouls3);
+            }
+
+            if (Regex.IsMatch(fileName, @"^[^\W_]+Ebl\.bhd$", RegexOptions.IgnoreCase))
+            {
+                return (FileType.EncryptedBhd, DSVersion.DarkSouls2);
             }
 
             // file.bdt
@@ -112,7 +130,7 @@ namespace BinderTool
             // file.tpfbdt
             if (fileName.EndsWith("bdt", StringComparison.InvariantCultureIgnoreCase))
             {
-                return FileType.Bdt;
+                return (FileType.Bdt, DSVersion.Common);
             }
 
             // file.bhd
@@ -120,25 +138,25 @@ namespace BinderTool
             // file.tpfbhd
             if (fileName.EndsWith("bhd", StringComparison.InvariantCultureIgnoreCase))
             {
-                return FileType.Bhd;
+                return (FileType.Bhd, DSVersion.Common);
             }
 
             if (fileName.EndsWith(".tpf", StringComparison.InvariantCultureIgnoreCase))
             {
-                return FileType.Tpf;
+                return (FileType.Tpf, DSVersion.Common);
             }
 
             if (fileName.EndsWith(".param", StringComparison.InvariantCultureIgnoreCase))
             {
-                return FileType.Param;
+                return (FileType.Param, DSVersion.Common);
             }
 
             if (fileName.EndsWith(".fmg", StringComparison.InvariantCultureIgnoreCase))
             {
-                return FileType.Fmg;
+                return (FileType.Fmg, DSVersion.Common);
             }
 
-            return FileType.Unknown;
+            return (FileType.Unknown, DSVersion.Common);
         }
     }
 }

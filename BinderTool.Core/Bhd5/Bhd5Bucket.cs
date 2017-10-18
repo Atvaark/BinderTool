@@ -18,7 +18,7 @@ namespace BinderTool.Core.Bhd5
             return _entries.AsEnumerable();
         }
 
-        public static Bhd5Bucket Read(BinaryReader reader)
+        public static Bhd5Bucket Read(BinaryReader reader, DSVersion version)
         {
             Bhd5Bucket result = new Bhd5Bucket();
 
@@ -30,7 +30,7 @@ namespace BinderTool.Core.Bhd5
 
             for (int i = 0; i < bucketEntryCount; i++)
             {
-                result._entries.Add(Bhd5BucketEntry.Read(reader));
+                result._entries.Add(Bhd5BucketEntry.Read(reader, version));
             }
 
             reader.Seek(currentPosition, SeekOrigin.Begin);

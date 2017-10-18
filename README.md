@@ -20,7 +20,7 @@ If you are looking for the Dark Souls II release check out the [v0.3](https://gi
 
 ## Requirements
 ```
-Microsoft .NET Framework 4.5
+Microsoft .NET Framework 4.5.2
 ```
 
 ## Usage

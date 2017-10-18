@@ -17,7 +17,7 @@ namespace BinderTool.Core.Bhd5
             return _buckets.AsEnumerable();
         }
 
-        public static Bhd5File Read(Stream inputStream)
+        public static Bhd5File Read(Stream inputStream, DSVersion version)
         {
             Bhd5File result = new Bhd5File();
 
@@ -26,7 +26,7 @@ namespace BinderTool.Core.Bhd5
             string signature = new string(reader.ReadChars(4));
             if (signature != Bhd5Signature)
                 throw new Bhd5FileReadException("Invalid signature");
-            int version = reader.ReadInt32(); // 511
+            int bhdVersion = reader.ReadInt32(); // 511
             int unknown = reader.ReadInt32(); // 1
             int size = reader.ReadInt32(); // excluding sizeof(signature)
             int bucketDirectoryEntryCount = reader.ReadInt32();
@@ -36,7 +36,7 @@ namespace BinderTool.Core.Bhd5
 
             for (int i = 0; i < bucketDirectoryEntryCount; i++)
             {
-                result._buckets.Add(Bhd5Bucket.Read(reader));
+                result._buckets.Add(Bhd5Bucket.Read(reader, version));
             }
 
             return result;
