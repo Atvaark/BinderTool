@@ -1,11 +1,11 @@
 # BinderTool
-A Dark Souls III bdt, bhd, bnd, dcx and sl2 unpacking tool
+A Dark Souls II/III bdt, bhd, bnd, dcx and sl2 unpacking tool
+
+[![Build status](https://ci.appveyor.com/api/projects/status/t6tf7uuggto1827a?svg=true)](https://ci.appveyor.com/project/Atvaark/bindertool)
 
 Binaries can be downloaded under [releases](https://github.com/Atvaark/BinderTool/releases).
 
-If you are looking for the Dark Souls II release check out the [v0.3](https://github.com/Atvaark/BinderTool/tree/v0.3) branch.
-
-### Dictionary Progress
+### DS III Dictionary Progress
 
 | archive   | found names | total names | found percentage |
 | :---      | ---:        | ---:        | ---:             |
