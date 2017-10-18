@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Diagnostics;
 using System.IO;
-using System.Reflection;
 using System.Text;
 using System.Text.RegularExpressions;
 using BinderTool.Core;
@@ -150,20 +149,27 @@ namespace BinderTool
                         }
 
                         string fileName;
-                        string extension = ".bin";
+                        string dataExtension = GetDataExtension(data);
                         bool fileNameFound = dictionary.TryGetFileName(entry.FileNameHash, archiveName, out fileName);
                         if (!fileNameFound)
                         {
-                            extension = GetDataExtension(data);
-                            fileNameFound = dictionary.TryGetFileName(entry.FileNameHash, archiveName, extension, out fileName);
+                            fileNameFound = dictionary.TryGetFileName(entry.FileNameHash, archiveName, dataExtension, out fileName);
                         }
 
+                        string extension;
                         if (fileNameFound)
                         {
                             extension = Path.GetExtension(fileName);
+
+                            if (dataExtension == ".dcx" && extension != ".dcx")
+                            {
+                                extension = ".dcx";
+                                fileName += ".dcx";
+                            }
                         }
                         else
                         {
+                            extension = dataExtension;
                             fileName = $"{entry.FileNameHash:D10}_{fileNameWithoutExtension}{extension}";
                         }
 
@@ -334,13 +340,14 @@ namespace BinderTool
                     extension = ".tpf";
                     return true;
                 case "PFBB":
-                    extension = ".pfbb";
+                    extension = ".pfbbin";
                     return true;
                 case "OBJB":
                     extension = ".breakobj";
                     return true;
                 case "filt":
-                    extension = ".gparam";
+                    extension = ".fltparam"; // DS II
+                    //extension = ".gparam"; // DS III
                     return true;
                 case "VSDF":
                     extension = ".vsd";
