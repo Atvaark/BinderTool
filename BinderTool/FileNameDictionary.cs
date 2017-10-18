@@ -2,6 +2,8 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Reflection;
+using BinderTool.Core;
 
 namespace BinderTool
 {
@@ -12,7 +14,7 @@ namespace BinderTool
             @"N:\FDP\data\"
         };
 
-        private static readonly string[] PhysicalRoots = {
+        private static readonly string[] PhysicalRootsDs3 = {
             "capture",
             "data1",
             "data2",
@@ -33,12 +35,33 @@ namespace BinderTool
             "hkxbnd",
         };
 
+        private static readonly Dictionary<string, string> SubstitutionMapDs2 = new Dictionary<string, string>
+        {
+            { "chr", "gamedata:" },
+            { "chrhq", "hqchr:" },
+            { "dlc_data", "gamedata:" },
+            { "dlc_menu", "gamedata:" },
+            { "eventmaker", "gamedata:" },
+            { "ezstate", "gamedata:" },
+            { "gamedata", "gamedata:" },
+            { "gamedata_patch", "gamedata:" },
+            { "icon", "gamedata:" },
+            { "map", "gamedata:" },
+            { "maphq", "hqmap:" },
+            { "menu", "gamedata:" },
+            { "obj", "gamedata:" },
+            { "objhq", "hqobj:" },
+            { "parts", "gamedata:" },
+            { "partshq", "hqparts:" },
+            { "text", "gamedata:" }
+        };
+
         /// <example>
         ///     1. gparam:/m_template.gparam.dcx
         ///     2. data1:/param/drawparam/m_template.gparam.dcx
         ///     3. /param/drawparam/m_template.gparam.dcx
         /// </example>
-        private static readonly Dictionary<string, string> SubstitutionMap = new Dictionary<string, string>
+        private static readonly Dictionary<string, string> SubstitutionMapDs3 = new Dictionary<string, string>
             {
                 { "cap_breakobj", "capture:/breakobj" },
                 { "cap_dbgsaveload", "capture:/dbgsaveload" },
@@ -108,16 +131,39 @@ namespace BinderTool
                 { "mapstudio", "data5:/map/mapstudio" },
                 { "onav", "data5:/map/onav" },
                 { "sndmap", "data5:/sound" },
-                { "sndremo", "data5:/sound" }, // TODO: Check if the sndremo files are in data5
+                { "sndremo", "data5:/sound" },
 
                 { "adhoc", "debugdata:/adhoc" }
             };
-
+        
         private readonly Dictionary<string, Dictionary<ulong, List<string>>> _dictionary;
+        private readonly Dictionary<string, string> _substitutionMap;
+        private readonly string[] _physicalRoots;
 
-        private FileNameDictionary()
+        public FileNameDictionary(DSVersion version)
         {
             _dictionary = new Dictionary<string, Dictionary<ulong, List<string>>>();
+
+            string[] physicalRoots;
+            Dictionary<string, string> substitutionMap;
+            switch (version)
+            {
+                case DSVersion.DarkSouls2:
+                    substitutionMap = SubstitutionMapDs2;
+                    physicalRoots = new string[0];
+                    break;
+                case DSVersion.DarkSouls3:
+                    substitutionMap = SubstitutionMapDs3;
+                    physicalRoots = PhysicalRootsDs3;
+                    break;
+                default:
+                    substitutionMap = new Dictionary<string, string>();
+                    physicalRoots = new string[0];
+                    break;
+            }
+            _substitutionMap = substitutionMap;
+            _physicalRoots = physicalRoots;
+
         }
 
         public bool TryGetFileName(ulong hash, string archiveName, out string fileName)
@@ -129,7 +175,35 @@ namespace BinderTool
                 List<string> fileNames;
                 if (archiveDictionary.TryGetValue(hash, out fileNames))
                 {
+                    if (fileNames.Count > 1)
+                    {
+                        return false;
+                    }
+
                     fileName = NormalizeFileName(fileNames.First());
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        public bool TryGetFileName(ulong hash, string archiveName, string extension, out string fileName)
+        {
+            fileName = "";
+            Dictionary<ulong, List<string>> archiveDictionary;
+            if (_dictionary.TryGetValue(archiveName, out archiveDictionary))
+            {
+                List<string> fileNames;
+                if (archiveDictionary.TryGetValue(hash, out fileNames))
+                {
+                    //if (fileNames.Count > 1)
+                    //{
+                    //    Debug.WriteLine($"Hashcollision: {hash}\t{archiveName}\t{fileNames.Count}\t{string.Join("\t", fileNames)}");
+                    //}
+
+                    fileName = fileNames.FirstOrDefault(e => e.EndsWith(extension)) ?? fileNames.First();
+                    fileName = NormalizeFileName(fileName);
                     return true;
                 }
             }
@@ -164,9 +238,9 @@ namespace BinderTool
             }
 
             string substitutionArchiveName;
-            if (!SubstitutionMap.TryGetValue(archiveName, out substitutionArchiveName))
+            if (!_substitutionMap.TryGetValue(archiveName, out substitutionArchiveName))
             {
-                if (!PhysicalRoots.Contains(archiveName))
+                if (!_physicalRoots.Contains(archiveName))
                 {
                     return;
                 }
@@ -203,9 +277,26 @@ namespace BinderTool
             }
         }
 
-        public static FileNameDictionary OpenFromFile(string dictionaryPath)
+        public static FileNameDictionary OpenFromFile(DSVersion version)
         {
-            var dictionary = new FileNameDictionary();
+            string dictionaryDirectory = Path.GetDirectoryName(Assembly.GetEntryAssembly().Location) ?? string.Empty;
+            string dictionaryName = "Dictionary.csv";
+            switch (version)
+            {
+                case DSVersion.DarkSouls2:
+                    dictionaryName = "DictionaryDS2.csv";
+                    break;
+                case DSVersion.DarkSouls3:
+                    dictionaryName = "DictionaryDS3.csv";
+                    break;
+            }
+            string dictionaryPath = Path.Combine(dictionaryDirectory, dictionaryName);
+            return OpenFromFile(dictionaryPath, version);
+        }
+
+        public static FileNameDictionary OpenFromFile(string dictionaryPath, DSVersion version)
+        {
+            var dictionary = new FileNameDictionary(version);
 
             string[] lines = File.ReadAllLines(dictionaryPath);
             foreach (string line in lines)

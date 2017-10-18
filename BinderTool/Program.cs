@@ -98,7 +98,7 @@ namespace BinderTool
         {
             Console.WriteLine(
                 "BinderTool by Atvaark\n" +
-                "  A tool for unpacking Dark Souls III Bdt, Bhd, Dcx, Sl2, Tpf, Param and Fmg files\n" +
+                "  A tool for unpacking Dark Souls II/III Bdt, Bhd, Dcx, Sl2, Tpf, Param and Fmg files\n" +
                 "Usage:\n" +
                 "  BinderTool file_path [output_path]\n" +
                 "Examples:\n" +
@@ -108,10 +108,8 @@ namespace BinderTool
 
         private static void UnpackBdtFile(Options options)
         {
-            string dictionaryPath = Path.Combine(Path.GetDirectoryName(Assembly.GetEntryAssembly().Location), "Dictionary.csv");
-            FileNameDictionary dictionary = FileNameDictionary.OpenFromFile(dictionaryPath);
-
-            string fileNameWithoutExtension = Path.GetFileName(options.InputPath).Replace(".bdt", "");
+            FileNameDictionary dictionary = FileNameDictionary.OpenFromFile(options.InputVersion);
+            string fileNameWithoutExtension = Path.GetFileName(options.InputPath).Replace("Ebl.bdt", "").Replace(".bdt", "");
             string archiveName = fileNameWithoutExtension.ToLower();
 
             using (Bdt5FileStream bdtStream = Bdt5FileStream.OpenFile(options.InputPath, FileMode.Open, FileAccess.Read))
@@ -152,15 +150,20 @@ namespace BinderTool
                         }
 
                         string fileName;
-                        string extension;
+                        string extension = ".bin";
                         bool fileNameFound = dictionary.TryGetFileName(entry.FileNameHash, archiveName, out fileName);
+                        if (!fileNameFound)
+                        {
+                            extension = GetDataExtension(data);
+                            fileNameFound = dictionary.TryGetFileName(entry.FileNameHash, archiveName, extension, out fileName);
+                        }
+
                         if (fileNameFound)
                         {
                             extension = Path.GetExtension(fileName);
                         }
                         else
                         {
-                            extension = GetDataExtension(data);
                             fileName = $"{entry.FileNameHash:D10}_{fileNameWithoutExtension}{extension}";
                         }
 
