@@ -50,18 +50,15 @@ namespace BinderTool.Core
 
         private static MemoryStream DecryptAes(Stream inputStream, BufferedBlockCipher cipher, long length)
         {
-            byte[] input = new byte[length];
-            byte[] output = new byte[cipher.GetOutputSize((int)length)];
-            // TODO: Check that all input streams are correctly aligned with the block size.
-            ////int blockSize = cipher.GetBlockSize();
-            ////long inputLength = inputStream.Length;
-            ////if (inputLength % blockSize > 0)
-            ////{
-            ////    inputLength += blockSize - inputLength % blockSize;
-            ////}
+            int blockSize = cipher.GetBlockSize();
+            long inputLength = inputStream.Length;
+            if (inputLength % blockSize > 0)
+            {
+                inputLength += blockSize - inputLength % blockSize;
+            }
 
-            ////byte[] input = new byte[inputLength];
-            ////byte[] output = new byte[cipher.GetOutputSize((int)inputLength)];
+            byte[] input = new byte[inputLength];
+            byte[] output = new byte[cipher.GetOutputSize((int)inputLength)];
 
             inputStream.Read(input, 0, (int)length);
 

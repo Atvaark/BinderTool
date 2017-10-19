@@ -68,6 +68,16 @@ namespace BinderTool
                 throw new ArgumentNullException(nameof(fileName));
             }
 
+            if (fileName == "Data0.bdt")
+            {
+                return (FileType.Regulation, DSVersion.DarkSouls3);
+            }
+
+            if (fileName == "enc_regulation.bnd.dcx")
+            {
+                return (FileType.Regulation, DSVersion.DarkSouls2);
+            }
+
             // file.dcx
             // file.bnd.dcx
             if (fileName.EndsWith(".dcx", StringComparison.InvariantCultureIgnoreCase))
@@ -95,16 +105,17 @@ namespace BinderTool
             }
 
             // DS30000.sl2
-            if (fileName.EndsWith(".sl2", StringComparison.CurrentCultureIgnoreCase))
+            if (Regex.IsMatch(fileName, @"^DS3\d+.*\.sl2", RegexOptions.IgnoreCase))
             {
-                return (FileType.Savegame, DSVersion.Common);
+                return (FileType.Savegame, DSVersion.DarkSouls3);
             }
 
-            if (fileName == "Data0.bdt")
+            // DARKSII0000.sl2
+            if (Regex.IsMatch(fileName, @"^DARKSII\d+.*\.sl2", RegexOptions.IgnoreCase))
             {
-                return (FileType.Regulation, DSVersion.Common);
+                return (FileType.Savegame, DSVersion.DarkSouls2);
             }
-
+            
             if (Regex.IsMatch(fileName, @"^(?:Data|DLC)\d\.bdt$", RegexOptions.IgnoreCase))
             {
                 return (FileType.EncryptedBdt, DSVersion.DarkSouls3);

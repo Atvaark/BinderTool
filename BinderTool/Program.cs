@@ -450,7 +450,8 @@ namespace BinderTool
         {
             using (FileStream inputStream = new FileStream(options.InputPath, FileMode.Open, FileAccess.Read))
             {
-                Sl2File sl2File = Sl2File.ReadSl2File(inputStream, DecryptionKeys.UserDataKey);
+                byte[] key = GetSavegameKey(options.InputVersion);
+                Sl2File sl2File = Sl2File.ReadSl2File(inputStream, key);
                 foreach (var userData in sl2File.UserData)
                 {
                     string outputFilePath = Path.Combine(options.OutputPath, userData.Name);
@@ -459,14 +460,53 @@ namespace BinderTool
             }
         }
 
+        private static byte[] GetSavegameKey(DSVersion version)
+        {
+            byte[] key;
+            switch (version)
+            {
+                case DSVersion.DarkSouls2:
+                    key = DecryptionKeys.UserDataKeyDs2;
+                    break;
+                case DSVersion.DarkSouls3:
+                    key = DecryptionKeys.UserDataKeyDs3;
+                    break;
+                default:
+                    key = new byte[16];
+                    break;
+            }
+
+            return key;
+        }
+
         private static void UnpackRegulationFile(Options options)
         {
             using (FileStream inputStream = new FileStream(options.InputPath, FileMode.Open, FileAccess.Read))
             {
-                EncFile encryptedFile = EncFile.ReadEncFile(inputStream, DecryptionKeys.RegulationFileKey);
+                byte[] key = GetRegulationKey(options.InputVersion);
+                EncFile encryptedFile = EncFile.ReadEncFile(inputStream, key, options.InputVersion);
                 DcxFile compressedRegulationFile = DcxFile.Read(encryptedFile.Data);
                 UnpackBndFile(new MemoryStream(compressedRegulationFile.Decompress()), options.OutputPath);
             }
+        }
+
+        private static byte[] GetRegulationKey(DSVersion version)
+        {
+            byte[] key;
+            switch (version)
+            {
+                case DSVersion.DarkSouls2:
+                    key = DecryptionKeys.RegulationFileKeyDs2;
+                    break;
+                case DSVersion.DarkSouls3:
+                    key = DecryptionKeys.RegulationFileKeyDs3;
+                    break;
+                default:
+                    key = new byte[16];
+                    break;
+            }
+
+            return key;
         }
 
         private static void UnpackDcxFile(Options options)

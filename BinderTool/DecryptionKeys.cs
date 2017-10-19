@@ -24,7 +24,8 @@ namespace BinderTool
 
             AesKeyDictionary = new Dictionary<string, byte[]>()
             {
-                { "regulation.regbnd.dcx.enc", RegulationFileKey }
+                { "regulation.regbnd.dcx.enc", RegulationFileKeyDs3 },
+                { "enc_regulation.bnd.dcx", RegulationFileKeyDs2 },
             };
         }
         
@@ -51,20 +52,33 @@ namespace BinderTool
         /// Address (vtable): 0000000142AECBB8 (DLCR::DLSerialKeyGeneratorSPI::vftable + 0x08) 
         /// Address (method): 0000000141790180 
         /// </summary>
-        public static readonly byte[] UserDataKey =
+        public static readonly byte[] UserDataKeyDs3 =
         {
-            0xFD, 0x46, 0x4D, 0x69, 0x5E, 0x69, 0xA3, 0x9A, 0x10, 0xE3, 0x19, 0xA7, 0xAC, 0xE8, 0xB7, 0xFA
+            0xFD, 0x46, 0x4D, 0x69, 0x5E, 0x69, 0xA3, 0x9A,
+            0x10, 0xE3, 0x19, 0xA7, 0xAC, 0xE8, 0xB7, 0xFA
+        };
+
+        public static readonly byte[] UserDataKeyDs2 =
+        {
+            0xB7, 0xFD, 0x46, 0x3E, 0x4A, 0x9C, 0x11, 0x02,
+            0xDF, 0x17, 0x39, 0xE5, 0xF3, 0xB2, 0xA5, 0x0F
+        };
+        
+        /// <summary>
+        /// <see cref="UserDataKeyDs3"/>
+        /// </summary>
+        public static readonly byte[] RegulationFileKeyDs3 = Encoding.ASCII.GetBytes("ds3#jn/8_7(rsY9pg55GFN7VFL#+3n/)");
+        
+        public static readonly byte[] RegulationFileKeyDs2 =
+        {
+            0x40, 0x17, 0x81, 0x30, 0xDF, 0x0A, 0x94, 0x54,
+            0x33, 0x09, 0xE1, 0x71, 0xEC, 0xBF, 0x25, 0x4C
         };
 
         /// <summary>
-        /// <see cref="DecryptionKeys.UserDataKey"/>
+        /// <see cref="UserDataKeyDs3"/>
         /// </summary>
-        public static readonly byte[] RegulationFileKey = Encoding.ASCII.GetBytes("ds3#jn/8_7(rsY9pg55GFN7VFL#+3n/)");
-
-        /// <summary>
-        /// <see cref="DecryptionKeys.UserDataKey"/>
-        /// </summary>
-        public static readonly byte[] NetworkSessionKey = Encoding.ASCII.GetBytes("ds3vvhes09djxwcj");
+        public static readonly byte[] NetworkSessionKeyDs3 = Encoding.ASCII.GetBytes("ds3vvhes09djxwcj");
 
         private const string Data1Key =
 @"-----BEGIN RSA PUBLIC KEY-----
