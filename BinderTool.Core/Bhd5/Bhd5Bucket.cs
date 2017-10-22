@@ -18,7 +18,7 @@ namespace BinderTool.Core.Bhd5
             return _entries.AsEnumerable();
         }
 
-        public static Bhd5Bucket Read(BinaryReader reader, DSVersion version)
+        public static Bhd5Bucket Read(BinaryReader reader, GameVersion version)
         {
             Bhd5Bucket result = new Bhd5Bucket();
 

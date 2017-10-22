@@ -140,7 +140,7 @@ namespace BinderTool
         private readonly Dictionary<string, string> _substitutionMap;
         private readonly string[] _physicalRoots;
 
-        public FileNameDictionary(DSVersion version)
+        public FileNameDictionary(GameVersion version)
         {
             _dictionary = new Dictionary<string, Dictionary<ulong, List<string>>>();
 
@@ -148,11 +148,11 @@ namespace BinderTool
             Dictionary<string, string> substitutionMap;
             switch (version)
             {
-                case DSVersion.DarkSouls2:
+                case GameVersion.DarkSouls2:
                     substitutionMap = SubstitutionMapDs2;
                     physicalRoots = new string[0];
                     break;
-                case DSVersion.DarkSouls3:
+                case GameVersion.DarkSouls3:
                     substitutionMap = SubstitutionMapDs3;
                     physicalRoots = PhysicalRootsDs3;
                     break;
@@ -277,16 +277,16 @@ namespace BinderTool
             }
         }
 
-        public static FileNameDictionary OpenFromFile(DSVersion version)
+        public static FileNameDictionary OpenFromFile(GameVersion version)
         {
             string dictionaryDirectory = Path.GetDirectoryName(Assembly.GetEntryAssembly().Location) ?? string.Empty;
             string dictionaryName = "Dictionary.csv";
             switch (version)
             {
-                case DSVersion.DarkSouls2:
+                case GameVersion.DarkSouls2:
                     dictionaryName = "DictionaryDS2.csv";
                     break;
-                case DSVersion.DarkSouls3:
+                case GameVersion.DarkSouls3:
                     dictionaryName = "DictionaryDS3.csv";
                     break;
             }
@@ -294,7 +294,7 @@ namespace BinderTool
             return OpenFromFile(dictionaryPath, version);
         }
 
-        public static FileNameDictionary OpenFromFile(string dictionaryPath, DSVersion version)
+        public static FileNameDictionary OpenFromFile(string dictionaryPath, GameVersion version)
         {
             var dictionary = new FileNameDictionary(version);
 

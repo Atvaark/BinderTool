@@ -21,11 +21,11 @@ namespace BinderTool.Core.Enc
 
         public MemoryStream Data { get; private set; }
 
-        public static EncFile ReadEncFile(Stream inputStream, byte[] key, DSVersion version = DSVersion.Common)
+        public static EncFile ReadEncFile(Stream inputStream, byte[] key, GameVersion version = GameVersion.Common)
         {
             EncFile encFile = new EncFile(key);
 
-            if (version == DSVersion.DarkSouls2)
+            if (version == GameVersion.DarkSouls2)
             {
                 encFile.ReadCtr(inputStream);
             }

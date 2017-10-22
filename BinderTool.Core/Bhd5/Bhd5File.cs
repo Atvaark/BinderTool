@@ -17,7 +17,7 @@ namespace BinderTool.Core.Bhd5
             return _buckets.AsEnumerable();
         }
 
-        public static Bhd5File Read(Stream inputStream, DSVersion version)
+        public static Bhd5File Read(Stream inputStream, GameVersion version)
         {
             Bhd5File result = new Bhd5File();
 

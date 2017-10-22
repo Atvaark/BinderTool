@@ -1,6 +1,6 @@
 ﻿namespace BinderTool.Core
 {
-    public enum DSVersion
+    public enum GameVersion
     {
         Common,
         DarkSouls2,

@@ -68,7 +68,7 @@
     <Compile Include="Dcx\DcxCompression.cs" />
     <Compile Include="Dcx\DcxFile.cs" />
     <Compile Include="Dcx\DeflateCompression.cs" />
-    <Compile Include="DSVersion.cs" />
+    <Compile Include="GameVersion.cs" />
     <Compile Include="Enc\EncFile.cs" />
     <Compile Include="Enfl\EntryFileListFile.cs" />
     <Compile Include="ExtensionMethods.cs" />

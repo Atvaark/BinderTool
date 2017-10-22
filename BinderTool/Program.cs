@@ -107,7 +107,7 @@ namespace BinderTool
 
         private static void UnpackBdtFile(Options options)
         {
-            FileNameDictionary dictionary = FileNameDictionary.OpenFromFile(options.InputVersion);
+            FileNameDictionary dictionary = FileNameDictionary.OpenFromFile(options.InputGameVersion);
             string fileNameWithoutExtension = Path.GetFileName(options.InputPath).Replace("Ebl.bdt", "").Replace(".bdt", "");
             string archiveName = fileNameWithoutExtension.ToLower();
 
@@ -116,8 +116,8 @@ namespace BinderTool
                 Bhd5File bhdFile = Bhd5File.Read(
                     inputStream: DecryptBhdFile(
                         filePath: Path.ChangeExtension(options.InputPath, "bhd"),
-                        version: options.InputVersion),
-                    version: options.InputVersion
+                        version: options.InputGameVersion),
+                    version: options.InputGameVersion
                     );
                 foreach (var bucket in bhdFile.GetBuckets())
                 {
@@ -417,7 +417,7 @@ namespace BinderTool
 
         private static void UnpackBhdFile(Options options)
         {
-            using (var inputStream = DecryptBhdFile(options.InputPath, options.InputVersion))
+            using (var inputStream = DecryptBhdFile(options.InputPath, options.InputGameVersion))
             using (var outputStream = File.OpenWrite(options.OutputPath))
             {
                 inputStream.WriteTo(outputStream);
@@ -450,7 +450,7 @@ namespace BinderTool
         {
             using (FileStream inputStream = new FileStream(options.InputPath, FileMode.Open, FileAccess.Read))
             {
-                byte[] key = GetSavegameKey(options.InputVersion);
+                byte[] key = GetSavegameKey(options.InputGameVersion);
                 Sl2File sl2File = Sl2File.ReadSl2File(inputStream, key);
                 foreach (var userData in sl2File.UserData)
                 {
@@ -460,15 +460,15 @@ namespace BinderTool
             }
         }
 
-        private static byte[] GetSavegameKey(DSVersion version)
+        private static byte[] GetSavegameKey(GameVersion version)
         {
             byte[] key;
             switch (version)
             {
-                case DSVersion.DarkSouls2:
+                case GameVersion.DarkSouls2:
                     key = DecryptionKeys.UserDataKeyDs2;
                     break;
-                case DSVersion.DarkSouls3:
+                case GameVersion.DarkSouls3:
                     key = DecryptionKeys.UserDataKeyDs3;
                     break;
                 default:
@@ -483,22 +483,22 @@ namespace BinderTool
         {
             using (FileStream inputStream = new FileStream(options.InputPath, FileMode.Open, FileAccess.Read))
             {
-                byte[] key = GetRegulationKey(options.InputVersion);
-                EncFile encryptedFile = EncFile.ReadEncFile(inputStream, key, options.InputVersion);
+                byte[] key = GetRegulationKey(options.InputGameVersion);
+                EncFile encryptedFile = EncFile.ReadEncFile(inputStream, key, options.InputGameVersion);
                 DcxFile compressedRegulationFile = DcxFile.Read(encryptedFile.Data);
                 UnpackBndFile(new MemoryStream(compressedRegulationFile.Decompress()), options.OutputPath);
             }
         }
 
-        private static byte[] GetRegulationKey(DSVersion version)
+        private static byte[] GetRegulationKey(GameVersion version)
         {
             byte[] key;
             switch (version)
             {
-                case DSVersion.DarkSouls2:
+                case GameVersion.DarkSouls2:
                     key = DecryptionKeys.RegulationFileKeyDs2;
                     break;
-                case DSVersion.DarkSouls3:
+                case GameVersion.DarkSouls3:
                     key = DecryptionKeys.RegulationFileKeyDs3;
                     break;
                 default:
@@ -593,14 +593,14 @@ namespace BinderTool
             Console.WriteLine($"The file : \'{options.InputPath}\' is already decrypted.");
         }
 
-        private static MemoryStream DecryptBhdFile(string filePath, DSVersion version)
+        private static MemoryStream DecryptBhdFile(string filePath, GameVersion version)
         {
             string fileDirectory = Path.GetDirectoryName(filePath) ?? string.Empty;
             string fileName = Path.GetFileName(filePath) ?? string.Empty;
             string key = null;
             switch (version)
             {
-                case DSVersion.DarkSouls2:
+                case GameVersion.DarkSouls2:
                     string keyFileName = Regex.Replace(fileName, @"Ebl\.bhd$", "KeyCode.pem", RegexOptions.IgnoreCase);
                     string keyFilePath = Path.Combine(fileDirectory, keyFileName);
                     if (File.Exists(keyFilePath))
@@ -608,7 +608,7 @@ namespace BinderTool
                         key = File.ReadAllText(keyFilePath);
                     }
                     break;
-                case DSVersion.DarkSouls3:
+                case GameVersion.DarkSouls3:
                     DecryptionKeys.TryGetRsaFileKey(fileName, out key);
                     break;
             }
