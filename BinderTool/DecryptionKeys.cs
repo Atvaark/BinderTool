@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Text;
 
 namespace BinderTool
@@ -11,7 +12,7 @@ namespace BinderTool
 
         static DecryptionKeys()
         {
-            RsaKeyDictionary = new Dictionary<string, string>
+            RsaKeyDictionary = new Dictionary<string, string>(StringComparer.InvariantCultureIgnoreCase)
             {
                 { "Data1.bhd", Data1Key },
                 { "Data2.bhd", Data2Key },
@@ -22,7 +23,7 @@ namespace BinderTool
                 { "DLC2.bhd", Dlc2Key },
             };
 
-            AesKeyDictionary = new Dictionary<string, byte[]>()
+            AesKeyDictionary = new Dictionary<string, byte[]>(StringComparer.InvariantCultureIgnoreCase)
             {
                 { "regulation.regbnd.dcx.enc", RegulationFileKeyDs3 },
                 { "enc_regulation.bnd.dcx", RegulationFileKeyDs2 },
