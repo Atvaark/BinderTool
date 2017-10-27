@@ -51,22 +51,22 @@ namespace BinderTool.Core
         private static MemoryStream DecryptAes(Stream inputStream, BufferedBlockCipher cipher, long length)
         {
             int blockSize = cipher.GetBlockSize();
-            long inputLength = inputStream.Length;
-            if (inputLength % blockSize > 0)
+            int inputLength = (int)length;
+            int paddedLength = inputLength;
+            if (paddedLength % blockSize > 0)
             {
-                inputLength += blockSize - inputLength % blockSize;
+                paddedLength += blockSize - paddedLength % blockSize;
             }
 
-            byte[] input = new byte[inputLength];
-            byte[] output = new byte[cipher.GetOutputSize((int)inputLength)];
+            byte[] input = new byte[paddedLength];
+            byte[] output = new byte[cipher.GetOutputSize(paddedLength)];
 
-            inputStream.Read(input, 0, (int)length);
-
+            inputStream.Read(input, 0, inputLength);
             int len = cipher.ProcessBytes(input, 0, input.Length, output, 0);
             cipher.DoFinal(output, len);
 
             MemoryStream outputStream = new MemoryStream();
-            outputStream.Write(output, 0, input.Length);
+            outputStream.Write(output, 0, inputLength);
             outputStream.Seek(0, SeekOrigin.Begin);
             return outputStream;
         }
