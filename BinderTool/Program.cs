@@ -97,7 +97,7 @@ namespace BinderTool
         {
             Console.WriteLine(
                 "BinderTool by Atvaark\n" +
-                "  A tool for unpacking Dark Souls II/III Bdt, Bhd, Dcx, Sl2, Tpf, Param and Fmg files\n" +
+                "  A tool for unpacking Dark Souls II/III/Bloodborne Bdt, Bhd, Dcx, Sl2, Tpf, Param and Fmg files\n" +
                 "Usage:\n" +
                 "  BinderTool file_path [output_path]\n" +
                 "Examples:\n" +
@@ -583,7 +583,10 @@ namespace BinderTool
                 {
                     string outputFilePath = Path.Combine(options.OutputPath, entry.FileName);
                     Directory.CreateDirectory(Path.GetDirectoryName(outputFilePath));
-                    File.WriteAllBytes(outputFilePath, entry.Data);
+                    using (var outputStream = File.Create(outputFilePath))
+                    {
+                        entry.Write(outputStream);
+                    }
                 }
             }
         }

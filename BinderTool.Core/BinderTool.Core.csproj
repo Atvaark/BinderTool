@@ -68,6 +68,16 @@
     <Compile Include="Dcx\DcxCompression.cs" />
     <Compile Include="Dcx\DcxFile.cs" />
     <Compile Include="Dcx\DeflateCompression.cs" />
+    <Compile Include="Dds\DdsFile.cs" />
+    <Compile Include="Dds\DdsFileHeader.cs" />
+    <Compile Include="Dds\DdsFileHeaderDx10.cs" />
+    <Compile Include="Dds\DdsPixelFormat.cs" />
+    <Compile Include="Dds\Enum\D3D10ResourceDimension.cs" />
+    <Compile Include="Dds\Enum\DdsCaps2Flags.cs" />
+    <Compile Include="Dds\Enum\DdsFileHeaderFlags.cs" />
+    <Compile Include="Dds\Enum\DdsPixelFormatFlag.cs" />
+    <Compile Include="Dds\Enum\DdsSurfaceFlags.cs" />
+    <Compile Include="Dds\Enum\DxgiFormat.cs" />
     <Compile Include="GameVersion.cs" />
     <Compile Include="Enc\EncFile.cs" />
     <Compile Include="Enfl\EntryFileListFile.cs" />

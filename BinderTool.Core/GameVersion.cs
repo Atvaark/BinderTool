@@ -4,6 +4,7 @@
     {
         Common,
         DarkSouls2,
-        DarkSouls3
+        DarkSouls3,
+        Bloodborne
     }
 }

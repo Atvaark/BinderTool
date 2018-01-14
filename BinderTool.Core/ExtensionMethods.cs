@@ -10,6 +10,12 @@ namespace BinderTool.Core
             reader.BaseStream.Position += count;
         }
 
+        internal static void WriteZeros(this BinaryWriter writer, int count)
+        {
+            byte[] zeros = new byte[count];
+            writer.Write(zeros);
+        }
+
         internal static string ReadString(this BinaryReader reader, int count)
         {
             return new string(reader.ReadChars(count));
