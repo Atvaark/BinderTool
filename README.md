@@ -1,9 +1,11 @@
 # BinderTool
-A Dark Souls II/III bdt, bhd, bnd, dcx and sl2 unpacking tool
+A Dark Souls II / Dark Souls III / Bloodborne / Sekiro bdt, bhd, bnd, dcx, tpf, fmg and param unpacking tool
 
 [![Build status](https://ci.appveyor.com/api/projects/status/t6tf7uuggto1827a?svg=true)](https://ci.appveyor.com/project/Atvaark/bindertool)
 
 Binaries can be downloaded under [releases](https://github.com/Atvaark/BinderTool/releases).
+
+# Sekiro support still WIP
 
 ### DS III Dictionary Progress
 
@@ -20,7 +22,9 @@ Binaries can be downloaded under [releases](https://github.com/Atvaark/BinderToo
 
 ## Requirements
 ```
-Microsoft .NET Framework 4.5.2
+64-bit Windows
+Microsoft .NET Framework 4.6.2
+
 ```
 
 ## Usage

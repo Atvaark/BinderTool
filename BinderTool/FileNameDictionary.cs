@@ -10,8 +10,10 @@ namespace BinderTool
     public class FileNameDictionary
     {
         private static readonly string[] VirtualRoots = {
-            @"N:\SPRJ\data\",
-            @"N:\FDP\data\"
+            //@"N:\SPRJ\data\",
+            //@"N:\FDP\data\",
+            //@"N:\NTC\",
+            @"N:\"
         };
 
         private static readonly string[] PhysicalRootsDs3 = {

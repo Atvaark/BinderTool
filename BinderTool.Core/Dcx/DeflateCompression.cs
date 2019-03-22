@@ -8,17 +8,17 @@ namespace BinderTool.Core.Dcx
         public const string DeflateSignature = "DFLT";
         public int Level { get; private set; }
 
-        public override MemoryStream CompressData(byte[] uncompressedData)
-        {
-            MemoryStream compressedBufferStream = new MemoryStream();
-            using (DeflaterOutputStream deflaterStream = new DeflaterOutputStream(compressedBufferStream))
-            {
-                deflaterStream.Write(uncompressedData, 0, uncompressedData.Length);
-            }
-            return compressedBufferStream;
-        }
+        //public override MemoryStream CompressData(byte[] uncompressedData)
+        //{
+        //    MemoryStream compressedBufferStream = new MemoryStream();
+        //    using (DeflaterOutputStream deflaterStream = new DeflaterOutputStream(compressedBufferStream))
+        //    {
+        //        deflaterStream.Write(uncompressedData, 0, uncompressedData.Length);
+        //    }
+        //    return compressedBufferStream;
+        //}
 
-        public override MemoryStream DecompressData(byte[] compressedData)
+        public override MemoryStream DecompressData(byte[] compressedData, int uncompressedSize)
         {
             InflaterInputStream inflaterStream = new InflaterInputStream(new MemoryStream(compressedData));
             MemoryStream outputStream = new MemoryStream();

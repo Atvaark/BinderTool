@@ -96,7 +96,7 @@ namespace BinderTool.Core.Dcx
 
         public byte[] Decompress()
         {
-            return Compression.DecompressData(CompressedData).ToArray();
+            return Compression.DecompressData(CompressedData, UncompressedSize).ToArray();
         }
     }
 }

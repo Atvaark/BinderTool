@@ -1,4 +1,5 @@
 ﻿using System.IO;
+using BinderTool.Core.Kraken;
 
 namespace BinderTool.Core.Dcx
 {
@@ -6,24 +7,20 @@ namespace BinderTool.Core.Dcx
     {
         public const string KrakenSignature = "KRAK";
 
-        public override MemoryStream CompressData(byte[] uncompressedData)
-        {
-            // TODO: Call oo2core_6_win64.dll.OodleLZ_Compress
-            return new MemoryStream(uncompressedData);
-        }
+        //public override MemoryStream CompressData(byte[] uncompressedData)
+        //{
+        //    var compressedData = NativeOodleKraken.Compress(
+        //        uncompressedData,
+        //        uncompressedData.Length,
+        //        NativeOodleKraken.OodleLZCompressor.Kraken,
+        //        NativeOodleKraken.OodleLZCompressionLevel.Normal);
+        //    return new MemoryStream(compressedData);
+        //}
 
-        public override MemoryStream DecompressData(byte[] compressedData)
+        public override MemoryStream DecompressData(byte[] compressedData, int uncompressedSize)
         {
-            // TODO: oo2core_6_win64.dll.OodleLZ_Compress
-            // 8 byte header
-            // uncompressed header + magic number of content
-            
-            if (compressedData.Length >= 8)
-            {
-                return new MemoryStream(compressedData, 8, compressedData.Length - 8);
-            }
-
-            return new MemoryStream(compressedData);
+            byte[] decompressedData = NativeOodleKraken.Decompress(compressedData, compressedData.Length, uncompressedSize);
+            return new MemoryStream(decompressedData);
         }
 
         public static KrakenCompression Read(BinaryReader reader)
