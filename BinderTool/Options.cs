@@ -33,6 +33,8 @@ namespace BinderTool
             options.InputType = fileType.type;
             options.InputGameVersion = fileType.version;
 
+            // TODO: GameVersion parameter (ds3 or sekiro)
+
             if (options.InputType == FileType.Unknown)
             {
                 throw new FormatException("Unsupported input file format");
@@ -118,7 +120,8 @@ namespace BinderTool
             
             if (Regex.IsMatch(fileName, @"^(?:Data|DLC)\d\.bdt$", RegexOptions.IgnoreCase))
             {
-                return (FileType.EncryptedBdt, GameVersion.DarkSouls3);
+                //return (FileType.EncryptedBdt, GameVersion.DarkSouls3);
+                return (FileType.EncryptedBdt, GameVersion.Sekiro);
             }
 
             if (Regex.IsMatch(fileName, @"^[^\W_]+Ebl\.bdt$", RegexOptions.IgnoreCase))
@@ -128,7 +131,8 @@ namespace BinderTool
 
             if (Regex.IsMatch(fileName, @"^(?:Data|DLC|)\d\.bhd$", RegexOptions.IgnoreCase))
             {
-                return (FileType.EncryptedBhd, GameVersion.DarkSouls3);
+                //return (FileType.EncryptedBhd, GameVersion.DarkSouls3);
+                return (FileType.EncryptedBhd, GameVersion.Sekiro);
             }
 
             if (Regex.IsMatch(fileName, @"^[^\W_]+Ebl\.bhd$", RegexOptions.IgnoreCase))

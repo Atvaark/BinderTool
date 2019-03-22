@@ -262,11 +262,12 @@ namespace BinderTool
                 return extension;
             }
 
-            if (TryGetUnicodeSignature(data, 4, out signature)
-                && TryGetFileExtension(signature, out extension))
-            {
-                return extension;
-            }
+            // TODO: Sekiro
+            //if (TryGetUnicodeSignature(data, 4, out signature)
+            //    && TryGetFileExtension(signature, out extension))
+            //{
+            //    return extension;
+            //}
 
             if (TryGetAsciiSignature(data, 26, out signature)
                 && TryGetFileExtension(signature.Substring(12, 14), out extension))
@@ -612,7 +613,8 @@ namespace BinderTool
                     }
                     break;
                 case GameVersion.DarkSouls3:
-                    DecryptionKeys.TryGetRsaFileKey(fileName, out key);
+                case GameVersion.Sekiro:
+                    DecryptionKeys.TryGetRsaFileKey(version, fileName, out key);
                     break;
             }
 

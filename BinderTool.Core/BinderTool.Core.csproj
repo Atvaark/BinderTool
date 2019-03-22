@@ -68,6 +68,7 @@
     <Compile Include="Dcx\DcxCompression.cs" />
     <Compile Include="Dcx\DcxFile.cs" />
     <Compile Include="Dcx\DeflateCompression.cs" />
+    <Compile Include="Dcx\KrakenCompression.cs" />
     <Compile Include="Dds\DdsFile.cs" />
     <Compile Include="Dds\DdsFileHeader.cs" />
     <Compile Include="Dds\DdsFileHeaderDx10.cs" />

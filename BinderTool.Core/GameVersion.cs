@@ -5,6 +5,7 @@
         Common,
         DarkSouls2,
         DarkSouls3,
-        Bloodborne
+        Bloodborne,
+        Sekiro
     }
 }

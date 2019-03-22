@@ -24,6 +24,7 @@ namespace BinderTool.Core.Bhd5
             switch (version)
             {
                 case GameVersion.DarkSouls3:
+                case GameVersion.Sekiro:
                     result.FileSize = reader.ReadInt64();
                     break;
                 default:

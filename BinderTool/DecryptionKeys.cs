@@ -1,43 +1,65 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Runtime.Remoting.Messaging;
 using System.Text;
+using BinderTool.Core;
 
 namespace BinderTool
 {
     internal static class DecryptionKeys
     {
-        private static readonly Dictionary<string, string> RsaKeyDictionary;
+        private static readonly Dictionary<string, string> Ds3RsaKeyDictionary;
 
-        private static readonly Dictionary<string, byte[]> AesKeyDictionary;
+        private static readonly Dictionary<string, string> SekiroRsaKeyDictionary;
+
+        private static readonly Dictionary<string, byte[]> Ds3AesKeyDictionary;
 
         static DecryptionKeys()
         {
-            RsaKeyDictionary = new Dictionary<string, string>(StringComparer.InvariantCultureIgnoreCase)
+            Ds3RsaKeyDictionary = new Dictionary<string, string>(StringComparer.InvariantCultureIgnoreCase)
             {
-                { "Data1.bhd", Data1Key },
-                { "Data2.bhd", Data2Key },
-                { "Data3.bhd", Data3Key },
-                { "Data4.bhd", Data4Key },
-                { "Data5.bhd", Data5Key },
-                { "DLC1.bhd", Dlc1Key },
-                { "DLC2.bhd", Dlc2Key },
+                { "Data1.bhd", Ds3Data1Key },
+                { "Data2.bhd", Ds3Data2Key },
+                { "Data3.bhd", Ds3Data3Key },
+                { "Data4.bhd", Ds3Data4Key },
+                { "Data5.bhd", Ds3Data5Key },
+                { "DLC1.bhd", Ds3Dlc1Key },
+                { "DLC2.bhd", Ds3Dlc2Key },
             };
 
-            AesKeyDictionary = new Dictionary<string, byte[]>(StringComparer.InvariantCultureIgnoreCase)
+            SekiroRsaKeyDictionary = new Dictionary<string, string>(StringComparer.InvariantCultureIgnoreCase)
+            {
+                { "Data1.bhd", SekiroData1Key },
+                { "Data2.bhd", SekiroData2Key },
+                { "Data3.bhd", SekiroData3Key },
+                { "Data4.bhd", SekiroData4Key },
+                { "Data5.bhd", SekiroData5Key }
+            };
+
+            Ds3AesKeyDictionary = new Dictionary<string, byte[]>(StringComparer.InvariantCultureIgnoreCase)
             {
                 { "regulation.regbnd.dcx.enc", RegulationFileKeyDs3 },
                 { "enc_regulation.bnd.dcx", RegulationFileKeyDs2 },
             };
         }
         
-        public static bool TryGetRsaFileKey(string file, out string key)
+        public static bool TryGetRsaFileKey(GameVersion version, string file, out string key)
         {
-            return RsaKeyDictionary.TryGetValue(file, out key);
+            switch (version)
+            {
+                case GameVersion.DarkSouls3:
+                    return Ds3RsaKeyDictionary.TryGetValue(file, out key);
+                case GameVersion.Sekiro:
+                    return SekiroRsaKeyDictionary.TryGetValue(file, out key);
+            }
+
+            key = null;
+            return false;
         }
 
         public static bool TryGetAesFileKey(string file, out byte[] key)
         {
-            return AesKeyDictionary.TryGetValue(file, out key);
+            return Ds3AesKeyDictionary.TryGetValue(file, out key);
         }
 
         /// <summary>
@@ -81,7 +103,7 @@ namespace BinderTool
         /// </summary>
         public static readonly byte[] NetworkSessionKeyDs3 = Encoding.ASCII.GetBytes("ds3vvhes09djxwcj");
 
-        private const string Data1Key =
+        private const string Ds3Data1Key =
 @"-----BEGIN RSA PUBLIC KEY-----
 MIIBCwKCAQEA05hqyboW/qZaJ3GBIABFVt1X1aa0/sKINklvpkTRC+5Ytbxvp18L
 M1gN6gjTgSJiPUgdlaMbptVa66MzvilEk60aHyVVEhtFWy+HzUZ3xRQm6r/2qsK3
@@ -91,7 +113,7 @@ swyyyXlQ23N15ZaFGRRR0xYjrX4LSe6OJ8Mx/Zkec0o7L28CgwCTmcD2wO8TEATE
 AUbbV+1Su9uq2+wQxgnsAp+xzhn9og9hmwIEC35bSQ==
 -----END RSA PUBLIC KEY-----";
 
-        private const string Data2Key =
+        private const string Ds3Data2Key =
 @"-----BEGIN RSA PUBLIC KEY-----
 MIIBCwKCAQEAvCZAK9UfPdk5JaTlG7n1r0LSVzIan3h0BSLaMXQHOwO7tTGpvtdX
 m2ZLY9y8SVmOxWTQqRq14aVGLTKDyH87hPuKd47Y0E5K5erTqBbXW6AD4El1eir2
@@ -101,7 +123,7 @@ mTMehtNj5EwPxGdT4CBPAWdeyPhpoHJHCbgrtnN9akwQmpwdBBxT/sTD16Adn9B+
 TxuGDQQALed4S4KvM+fadx27pQz8pP9VLwIEL67iCQ==
 -----END RSA PUBLIC KEY-----";
 
-        private const string Data3Key =
+        private const string Ds3Data3Key =
 @"-----BEGIN RSA PUBLIC KEY-----
 MIIBCwKCAQEAqLytWD20TSXPeAA1RGDwPW18nJwe2rBX+0HPtdzFmQc/KmQlWrP+
 94k6KClK5f7m0xUHwT8+yFGLxPdRvUPyOhBEnRA6tkObVDSxij5y0Jh4h4ilAO73
@@ -111,7 +133,7 @@ CFruNXnfsG0hlf9LqbVmEzbFl/MhjBmbVjjtelorZsoLPK+OiPTHW5EcwwnPh1vH
 FFGM7qRMc0yvHqJnniEWDsSz8Bvg+GxpgQIEC8XNVw==
 -----END RSA PUBLIC KEY-----";
 
-        private const string Data4Key =
+        private const string Ds3Data4Key =
 @"-----BEGIN RSA PUBLIC KEY-----
 MIIBCwKCAQEArfUaZWjYAUaZ0q+5znpX55GeyepawCZ5NnsMjIW9CA3vrOgUGRkh
 6aAU9frlafQ81LQMRgAznOnQGE7K3ChfySDpq6b47SKm4bWPqd7Ulh2DTxIgi6QP
@@ -121,7 +143,7 @@ n2LJP5t5wpEJvV2ACiA4U5fyjQLDzRwtCKzeK7yFkKiZI95JJhU/3DnVvssjIxku
 gYZkS9D3k9m+tkNe0VVrd4mBEmqVxg+V9wIEL6Y6tw==
 -----END RSA PUBLIC KEY-----";
 
-        private const string Data5Key =
+        private const string Ds3Data5Key =
 @"-----BEGIN RSA PUBLIC KEY-----
 MIIBCwKCAQEAvKTlU3nka4nQesRnYg1NWovCCTLhEBAnjmXwI69lFYfc4lvZsTrQ
 E0Y25PtoP0ZddA3nzflJNz1rBwAkqfBRGTeeTCAyoNp/iel3EAkid/pKOt3JEkHx
@@ -131,7 +153,7 @@ izH5XFTOu0UIcUmBLsK6DYsIj5QGrWaxwwXcTJN/X+/syJ/TbQK9W/TCGaGiirGM
 aH3kbUxKlDGaEENNNyZQcQrgz8Q76jIE0QIEFUsz9w==
 -----END RSA PUBLIC KEY-----";
 
-        private const string Dlc1Key =
+        private const string Ds3Dlc1Key =
 @"-----BEGIN RSA PUBLIC KEY-----
 MIIBCwKCAQEAsCGM9dFwzaIOUIin3DXy7xrmI2otKGLZJQyKi5X3znKhSTywpcFc
 KoW6hgjeh4fJW24jhzwBosG6eAzDINm+K02pHCG8qZ/D/hIbu+ui0ENDKqrVyFhn
@@ -141,7 +163,7 @@ jnIFl1T17R8DpTU/93ojx+/q1p+b1o5is5KcoP7QwjOqzjHJH8bTytzRbgmRcDMW
 3ahxgI070d45TMXK2YwRzI6/JbM1P29anQIEFezyYw==
 -----END RSA PUBLIC KEY-----";
 
-        private const string Dlc2Key =
+        private const string Ds3Dlc2Key =
 @"-----BEGIN RSA PUBLIC KEY-----
 MIIBCwKCAQEAtCXU9a/GBMVoqtpQox9p0/5sWPaIvDp8avLFnIBhN7vkgTwulZHi
 u64vZAiUAdVeFX4F+Qtk+5ivK488Mu2CzAMJcz5RvyMQJtOQXuDDqzIv21Tr5zuu
@@ -149,6 +171,56 @@ sswoErHxxP8TZNxkHm7Ram7Oqtn7LQnMTYxsBgZZ34yJkRtAmZnGoCu5YaUR5euk
 8lF75idi97ssczUNV212tLzIMa1YOV7sxOb7+gc0VTIqs3pa+OXLPI/bMfwUc/KN
 jur5aLDDntQHGx5zuNtc78gMGwlmPqDhgTusKPO4VyKvoL0kITYvukoXJATaa1HI
 WVUjhLm+/uj8r8PNgolerDeS+8FM5Bpe9QIEHwCZLw==
+-----END RSA PUBLIC KEY-----";
+
+        private const string SekiroData1Key =
+@"-----BEGIN RSA PUBLIC KEY-----
+MIIBCwKCAQEA92l+AWx1aV7mzt+6r00bm/qnc4b6NH3VVr/v4UxMcfzushL8jsn9
+ZSP1ss95ot/quk8dOJsp0+/bvxH+C9DEezzNLSqqAGd2jq2PYosj/6FhYAKjjMlK
+jNxcVPsKQug0Zby+KYsENirmEXcmA1fzltrISf6d6LKB1UFHHN9NRkLCm3idE4Pu
+9852kPHbiL14EqfDCDgwm7kLeQdt3kUbcmdhu/6dvP42HGxBmAYLNFD3iAe7qLML
+MFzmKKHQD2fRQK/431Z3xPK6Jp245AdR0AwUYVvnXq+/97wMX0C6UKvAZ+b/1ytD
+Nu8vZt++lhJ01SjTc2A4hVPz7g1EEO5/TQIEKkj5Jw==
+-----END RSA PUBLIC KEY-----";
+
+        private const string SekiroData2Key =
+@"-----BEGIN RSA PUBLIC KEY-----
+MIIBDAKCAQEAqhjoThWX8VwsTKTI1kjp0JBloCXhV8i99P1KPTCTDBnmhVQPdu+7
+UQ5g4//eh0oqKaOUjet+0SP94QscjIIrhV91OzfIouIWgJJK/ROOP/A3sb5AlzPa
+6YPcN8ODxR+esyrWhc6rHCt4qGvXVXrgh6zpZM5h5VCTSaup4qqIWm44EF3+FeYS
+7faFg14rH0QEosieIIZFZmpI6SCJanlrVd+Zh13s4XcZfk0JdC2AEjxCQ2lKi3Un
+WAMOcJc+8uHoMuNNo1PMpYQ6Z8Nzg5Cii7EnwbCDmuJw58tFBmbOVHZpkY93VIeF
+maJXSE7ztTp0qTa05YZUsiU3g9HplkeTUwIFAP/xKZE=
+-----END RSA PUBLIC KEY-----";
+
+        private const string SekiroData3Key =
+@"-----BEGIN RSA PUBLIC KEY-----
+MIIBDAKCAQEAx5jlgIvoHQLwSFsAwKFZbNo3fgZ89C7tj4hwiZsQVg8QnNZohXl5
+S5Ep9pS2biOFsSkuZMXKmfYErh2CsdFbr7QR7kvPPianXNrkCI4xlfQwJvMmkLm9
+6/JmRIUzTWp0kKJUJZJH/UIrXNn7fmk8Vmx1bQIi8bumGSl3gxeMhutv/lC9khsY
+Tn0ABTJAbIbwNZ5GPXxzQZuQPXXDY52Gm+Fx7Yy1LiK/B6isIDJUN0xdgxdaXxGN
+f5pPocMJjng0Ob3cjhGvdkysll/jYFnRx0La3CGmtLcXMtHheEQxzGueGDa/lkkl
+AvvEXtcpKfyFQWcUheQZ8LngAh/UTJHtQwIFAOpVoU8=
+-----END RSA PUBLIC KEY-----";
+
+        private const string SekiroData4Key =
+@"-----BEGIN RSA PUBLIC KEY-----
+MIIBCwKCAQEAq8RyArk+eqMAcxLAHUDRYV7yScNKZpKSxGmgJZQ7y6Y8f5wdrNCt
+byXfmsdQECStIGlkwWjtfm8t/bRZuxxPciAYaFsWo0Ze2BB6uY6ZteNpLJn82qbL
+TXATf+af3kSrvICfvJwRzbfA/PRJRkHj2gJ6Tc7g6HK7S/4TiCZirq+c/zLY3gb8
+A8uIFNI4j0qxTzfoAlS7K6spZjfnhZ6l7pYFh+glz15wAbppC9Oy/u5vUacozf4v
+nacbUHD47ds9EZPZDHk3LfJbioHwtUzJfyBqZmIpI33yiwImPpb96zwvQU86TaXK
+sJrTmSs/48BeDsQwXuaqOg+6noETBx3pgQIEGM2Ohw==
+-----END RSA PUBLIC KEY-----";
+
+        private const string SekiroData5Key =
+@"-----BEGIN RSA PUBLIC KEY-----
+MIIBDAKCAQEAu75/UbXwHdvu/p49TwnY7Ou6DAuZYFAtLUkw/R4nvm0HWVlRsZiB
+LG3MOG6sPmK2Zc3JLBU2QK4uKazZ9VrmotM4OpYr03q2tiFnv3NfCvB1UeIJIKe3
+kVhHNZIbvrwEP9a5UCnrSHD+u+Fj5MQBr4yrEitwrNVvIC4J0Ez1Ppn3+D8ff8Xg
+QRP9qCVLI3X/wdQDea+B5o8PWaYEL9MKnnL1Tq4h+4PRYHcQR8/GXBTrc3x9q3cP
+QRDWHbRYhIfWSP9urtagjcsmcuG+p34fp+KyWOwkil3FJqwH1KgSTbk9Tb0oBPzq
+TCJKeE/wgu6hY++lBi5T3ArHZZcsbXzV6wIFAPlRTMc=
 -----END RSA PUBLIC KEY-----";
     }
 }

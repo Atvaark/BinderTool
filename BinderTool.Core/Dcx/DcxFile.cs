@@ -74,10 +74,17 @@ namespace BinderTool.Core.Dcx
             if (signature != DcpSignature)
                 throw new Exception("Signature was not DCP");
             signature = reader.ReadString(4);
-            if (signature != DeflateCompression.DeflateSignature)
-                throw new NotImplementedException($"Compression not implemented ({signature}) ");
-
-            Compression = DeflateCompression.Read(reader);
+            switch (signature)
+            {
+                case DeflateCompression.DeflateSignature:
+                    Compression = DeflateCompression.Read(reader);
+                    break;
+                case KrakenCompression.KrakenSignature:
+                    Compression = KrakenCompression.Read(reader);
+                    break;
+                default:
+                    throw new NotImplementedException($"Compression not implemented ({signature}) ");
+            }
 
             signature = reader.ReadString(4);
             if (signature != DcaSignature)

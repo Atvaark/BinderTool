@@ -289,6 +289,9 @@ namespace BinderTool
                 case GameVersion.DarkSouls3:
                     dictionaryName = "DictionaryDS3.csv";
                     break;
+                case GameVersion.Sekiro:
+                    dictionaryName = "DictionarySekiro.csv";
+                    break;
             }
             string dictionaryPath = Path.Combine(dictionaryDirectory, dictionaryName);
             return OpenFromFile(dictionaryPath, version);
