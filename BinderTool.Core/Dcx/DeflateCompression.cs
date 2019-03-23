@@ -18,7 +18,7 @@ namespace BinderTool.Core.Dcx
             return compressedBufferStream;
         }
 
-        public override MemoryStream DecompressData(byte[] compressedData)
+        public override MemoryStream DecompressData(byte[] compressedData, int unCompressedSize)
         {
             InflaterInputStream inflaterStream = new InflaterInputStream(new MemoryStream(compressedData));
             MemoryStream outputStream = new MemoryStream();

@@ -74,10 +74,15 @@ namespace BinderTool.Core.Dcx
             if (signature != DcpSignature)
                 throw new Exception("Signature was not DCP");
             signature = reader.ReadString(4);
-            if (signature != DeflateCompression.DeflateSignature)
+            if (signature == DeflateCompression.DeflateSignature)
+                Compression = DeflateCompression.Read(reader);
+            else if (signature == OodleCompression.OodleSignature)
+            {
+                Compression = OodleCompression.Read(reader);
+            } else
                 throw new NotImplementedException($"Compression not implemented ({signature}) ");
 
-            Compression = DeflateCompression.Read(reader);
+            
 
             signature = reader.ReadString(4);
             if (signature != DcaSignature)
@@ -89,7 +94,7 @@ namespace BinderTool.Core.Dcx
 
         public byte[] Decompress()
         {
-            return Compression.DecompressData(CompressedData).ToArray();
+            return Compression.DecompressData(CompressedData, UncompressedSize).ToArray();
         }
     }
 }
