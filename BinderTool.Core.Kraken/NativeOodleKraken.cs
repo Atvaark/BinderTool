@@ -1,4 +1,5 @@
 using System;
+using System.Diagnostics;
 using System.Runtime.InteropServices;
 
 namespace BinderTool.Core.Kraken
@@ -104,10 +105,11 @@ namespace BinderTool.Core.Kraken
 
             if (decompressedSize == 0)
             {
-                throw new ApplicationException("Failed to decompress buffer");
+                // Fails on Sekiro Data5.bdt > 7052488_Data5.bnd, yet {decompressedBuffer} contains a valid .bnd file
+                Debug.WriteLine($"Failed to decompress buffer of size {size} to {uncompressedSize}.");
+                //throw new ApplicationException("Failed to decompress buffer");
             }
-
-            if (decompressedSize != uncompressedSize)
+            else if (decompressedSize != uncompressedSize)
             {
                 Array.Resize(ref decompressedBuffer, decompressedSize);
             }
