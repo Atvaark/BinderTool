@@ -118,7 +118,7 @@ namespace BinderTool
                 return (FileType.Savegame, GameVersion.DarkSouls2);
             }
             
-            if (Regex.IsMatch(fileName, @"^(?:Data|DLC)\d\.bdt$", RegexOptions.IgnoreCase))
+            if (Regex.IsMatch(fileName, @"^(?:Data|DLC)\d?\.bdt$", RegexOptions.IgnoreCase))
             {
                 //return (FileType.EncryptedBdt, GameVersion.DarkSouls3);
                 return (FileType.EncryptedBdt, GameVersion.Sekiro);
@@ -129,7 +129,7 @@ namespace BinderTool
                 return (FileType.EncryptedBdt, GameVersion.DarkSouls2);
             }
 
-            if (Regex.IsMatch(fileName, @"^(?:Data|DLC|)\d\.bhd$", RegexOptions.IgnoreCase))
+            if (Regex.IsMatch(fileName, @"^(?:Data|DLC|)\d?\.bhd$", RegexOptions.IgnoreCase))
             {
                 //return (FileType.EncryptedBhd, GameVersion.DarkSouls3);
                 return (FileType.EncryptedBhd, GameVersion.Sekiro);

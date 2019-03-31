@@ -33,7 +33,8 @@ namespace BinderTool
                 { "Data2.bhd", SekiroData2Key },
                 { "Data3.bhd", SekiroData3Key },
                 { "Data4.bhd", SekiroData4Key },
-                { "Data5.bhd", SekiroData5Key }
+                { "Data5.bhd", SekiroData5Key },
+                { "Data.bhd", SekiroArtworkKey }
             };
 
             Ds3AesKeyDictionary = new Dictionary<string, byte[]>(StringComparer.InvariantCultureIgnoreCase)
@@ -221,6 +222,42 @@ kVhHNZIbvrwEP9a5UCnrSHD+u+Fj5MQBr4yrEitwrNVvIC4J0Ez1Ppn3+D8ff8Xg
 QRP9qCVLI3X/wdQDea+B5o8PWaYEL9MKnnL1Tq4h+4PRYHcQR8/GXBTrc3x9q3cP
 QRDWHbRYhIfWSP9urtagjcsmcuG+p34fp+KyWOwkil3FJqwH1KgSTbk9Tb0oBPzq
 TCJKeE/wgu6hY++lBi5T3ArHZZcsbXzV6wIFAPlRTMc=
+-----END RSA PUBLIC KEY-----";
+
+        /// <summary>
+        ///     Same as <see cref="Ds3Dlc1Key"/>.
+        /// </summary>
+        private const string SekiroUnknownKey1 =
+@"-----BEGIN RSA PUBLIC KEY-----
+MIIBCwKCAQEAsCGM9dFwzaIOUIin3DXy7xrmI2otKGLZJQyKi5X3znKhSTywpcFc
+KoW6hgjeh4fJW24jhzwBosG6eAzDINm+K02pHCG8qZ/D/hIbu+ui0ENDKqrVyFhn
+QtX5/QJkVQtj8M4a0FIfdtE3wkxaKtP6IXWIy4DesSdGWONVWLfi2eq62A5ts5MF
+qMoSV3XjTYuCgXqZQ6eOE+NIBQRqpZxLNFSzbJwWXpAg2kBMkpy5+ywOByjmWzUw
+jnIFl1T17R8DpTU/93ojx+/q1p+b1o5is5KcoP7QwjOqzjHJH8bTytzRbgmRcDMW
+3ahxgI070d45TMXK2YwRzI6/JbM1P29anQIEFezyYw==
+-----END RSA PUBLIC KEY-----";
+
+        /// <summary>
+        ///     Same as <see cref="Ds3Dlc2Key"/>.
+        /// </summary>
+        private const string SekiroUnknownKey2 =
+@"-----BEGIN RSA PUBLIC KEY-----
+MIIBCwKCAQEAtCXU9a/GBMVoqtpQox9p0/5sWPaIvDp8avLFnIBhN7vkgTwulZHi
+u64vZAiUAdVeFX4F+Qtk+5ivK488Mu2CzAMJcz5RvyMQJtOQXuDDqzIv21Tr5zuu
+sswoErHxxP8TZNxkHm7Ram7Oqtn7LQnMTYxsBgZZ34yJkRtAmZnGoCu5YaUR5euk
+8lF75idi97ssczUNV212tLzIMa1YOV7sxOb7+gc0VTIqs3pa+OXLPI/bMfwUc/KN
+jur5aLDDntQHGx5zuNtc78gMGwlmPqDhgTusKPO4VyKvoL0kITYvukoXJATaa1HI
+WVUjhLm+/uj8r8PNgolerDeS+8FM5Bpe9QIEHwCZLw==
+-----END RSA PUBLIC KEY-----";
+
+        private const string SekiroArtworkKey =
+@"-----BEGIN RSA PUBLIC KEY-----
+MIIBDAKCAQEAxFOPK7c3E2Tu8HSS3NUlWUHdlJZIJiHf/0DhyLZUP68iEhJ8SLQ0
+sDAgFBxIAEZQcVZBKLhTZiTyqaqIolgCDH6ZcMlWOGOWj3G6PuhPeb/7ZeQSo7Xv
+plGCovqnioRoaFf4gVZDsbpVXIGNXwWsL5kArQiQo3ZrMs17/t77yZ6avC/1hnFp
+ks1k3uQ269NKZOpU6Q73I8yolUFGJFBlm9uHqRfZC0wcA+IXjo96C1PoTKJQktkh
+J07MPeoeckkAGdUv9S+kcDN04SAGMJJBWB9OOvn2Qle938gmCY6beeuk8c/l67zs
+ChgwGmsLdVr7W6hZL3aNvsf/BWFQ+e7+tQIFANZbM50=
 -----END RSA PUBLIC KEY-----";
     }
 }
