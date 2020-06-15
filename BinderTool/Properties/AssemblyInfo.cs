@@ -6,7 +6,7 @@ using System.Runtime.InteropServices;
 [assembly: AssemblyConfiguration("")]
 [assembly: AssemblyCompany("")]
 [assembly: AssemblyProduct("BinderTool")]
-[assembly: AssemblyCopyright("Copyright © 2019 Atvaark")]
+[assembly: AssemblyCopyright("Copyright © 2020 Atvaark")]
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]
 [assembly: ComVisible(false)]

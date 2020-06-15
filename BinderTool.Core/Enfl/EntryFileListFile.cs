@@ -1,6 +1,6 @@
 ﻿using System.IO;
 using System.Text;
-using ICSharpCode.SharpZipLib.Zip.Compression.Streams;
+using Ionic.Zlib;
 
 namespace BinderTool.Core.Enfl
 {
@@ -88,11 +88,8 @@ namespace BinderTool.Core.Enfl
             int uncompressedSize = reader.ReadInt32();
 
             byte[] data = reader.ReadBytes(compressedSize);
-            InflaterInputStream inflaterStream = new InflaterInputStream(new MemoryStream(data));
-            MemoryStream decompressedStream = new MemoryStream();
-            inflaterStream.CopyTo(decompressedStream);
-            decompressedStream.Position = 0;
-            return decompressedStream;
+            byte[] uncompressData = ZlibStream.UncompressBuffer(data);
+            return new MemoryStream(uncompressData);
         }
     }
 }

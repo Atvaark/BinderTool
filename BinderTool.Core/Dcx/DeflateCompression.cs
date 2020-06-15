@@ -1,5 +1,5 @@
 ﻿using System.IO;
-using ICSharpCode.SharpZipLib.Zip.Compression.Streams;
+using Ionic.Zlib;
 
 namespace BinderTool.Core.Dcx
 {
@@ -11,20 +11,18 @@ namespace BinderTool.Core.Dcx
         //public override MemoryStream CompressData(byte[] uncompressedData)
         //{
         //    MemoryStream compressedBufferStream = new MemoryStream();
-        //    using (DeflaterOutputStream deflaterStream = new DeflaterOutputStream(compressedBufferStream))
+        //    using (var zlibStream = new ZlibStream(compressedBufferStream, CompressionMode.Compress, (CompressionLevel)Level))
         //    {
-        //        deflaterStream.Write(uncompressedData, 0, uncompressedData.Length);
+        //        zlibStream.Write(uncompressedData, 0, uncompressedData.Length);
         //    }
+
         //    return compressedBufferStream;
         //}
 
         public override MemoryStream DecompressData(byte[] compressedData, int uncompressedSize)
         {
-            InflaterInputStream inflaterStream = new InflaterInputStream(new MemoryStream(compressedData));
-            MemoryStream outputStream = new MemoryStream();
-            inflaterStream.CopyTo(outputStream);
-            outputStream.Position = 0;
-            return outputStream;
+            var decompressedData = ZlibStream.UncompressBuffer(compressedData);
+            return new MemoryStream(decompressedData);
         }
 
         public static DeflateCompression Read(BinaryReader reader)
