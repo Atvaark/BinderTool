@@ -219,7 +219,7 @@ namespace BinderTool
                             data = bdtStream.Read(entry.FileOffset, entry.PaddedFileSize);
                             CryptographyUtility.DecryptAesEcb(data, entry.AesKey.Key, entry.AesKey.Ranges);
                             data.Position = 0;
-                            //data.SetLength(entry.FileSize);
+                            data.SetLength(entry.FileSize);
                         }
                         else
                         {
@@ -304,7 +304,16 @@ namespace BinderTool
                             continue;
                         }
                         if (options.AutoExtractParam && extension == ".param") {
-                            UnpackParamFile(data, fileNameWithoutExtension, options.OutputPath + '\\' + fileNameWithoutExtension);
+                            UnpackParamFile(data, fileNameWithoutExtension, Path.Combine(options.OutputPath, fileNameWithoutExtension));
+                            continue;
+                        }
+                        if (options.AutoExtractFmg && extension == ".fmg") {
+                            UnpackFmgFile(data, Path.Combine(options.OutputPath, fileName));
+                            continue;
+                        }
+                        if (options.AutoExtractEnfl && extension == ".enfl") {
+                            var ans = UnpackEnflFile(data);
+                            File.WriteAllText(Path.Combine(options.OutputPath, fileName+".csv"), ans);
                             continue;
                         }
                         string newFileNamePath = Path.Combine(options.OutputPath, fileName);
@@ -491,7 +500,7 @@ namespace BinderTool
                     extension = ".emevd";
                     return true;
                 case "ENFL":
-                    extension = ".entryfilelist";
+                    extension = ".enfl";
                     return true;
                 case "NVMA":
                     extension = ".nvma"; // ?
@@ -745,7 +754,6 @@ namespace BinderTool
             ParamFile paramFile = ParamFile.ReadParamFile(inputStream);
             ParamFormatDesc d = ParamFormatDesc.Read(fileName);
             if (d == null) {
-                return;
                 var dir = Path.Combine(Directory.GetParent(outputPath).FullName, Path.GetFileNameWithoutExtension(outputPath));
                 Directory.CreateDirectory(dir);
                 foreach (var entry in paramFile.Entries) {
@@ -811,21 +819,25 @@ namespace BinderTool
         {
             using (FileStream inputStream = new FileStream(options.InputPath, FileMode.Open, FileAccess.Read))
             {
-                FmgFile fmgFile = FmgFile.ReadFmgFile(inputStream);
-
-                StringBuilder builder = new StringBuilder();
-                foreach (var entry in fmgFile.Entries)
-                {
-                    string value = entry.Value
-                        .Replace("\r", "\\r")
-                        .Replace("\n", "\\n")
-                        .Replace("\t", "\\t");
-                    builder.AppendLine($"{entry.Id}\t{value}");
-                }
-
-                string outputPath = options.OutputPath + ".txt";
-                File.WriteAllText(outputPath, builder.ToString());
+                UnpackFmgFile(inputStream, options.OutputPath);
             }
+        }
+
+        public static void UnpackFmgFile(Stream inputStream, string outputPath)
+        {
+            FmgFile fmgFile = FmgFile.ReadFmgFile(inputStream);
+
+            StringBuilder builder = new StringBuilder();
+            foreach (var entry in fmgFile.Entries) {
+                string value = entry.Value
+                    .Replace("\r", "\\r")
+                    .Replace("\n", "\\n")
+                    .Replace("\t", "\\t");
+                builder.AppendLine($"{entry.Id}\t{value}");
+            }
+
+            outputPath += ".txt";
+            File.WriteAllText(outputPath, builder.ToString());
         }
 
         private static void UnpackEnflFile(Options options)

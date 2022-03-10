@@ -1,11 +1,11 @@
 # BinderTool
-A Dark Souls II / Dark Souls III / Bloodborne / Sekiro bdt, bhd, bnd, dcx, tpf, fmg and param unpacking tool
+A Dark Souls II / Dark Souls III / Bloodborne / Sekiro / Elden Ring bdt, bhd, bnd, dcx, tpf, fmg and param unpacking tool
 
 [![Build status](https://ci.appveyor.com/api/projects/status/t6tf7uuggto1827a?svg=true)](https://ci.appveyor.com/project/Atvaark/bindertool)
 
 Binaries can be downloaded under [releases](https://github.com/Atvaark/BinderTool/releases).
 
-# Sekiro support still WIP
+# Sekiro/Elden Ring support still WIP
 
 ### DS III Dictionary Progress
 
@@ -29,9 +29,34 @@ Microsoft .NET Framework 4.6.2
 
 ## Usage
 ```
-BinderTool input_file_path [output_folder_path]
+BinderTool input_file_path [output_folder_path] [--game <game>] [--type <file type>] [--extract-bnd true|false] [--extract-param true|false] [--extract-fmg true|false] [--extract-enfl true|false] [--recurse true|false]
 ```
 If no output folder path is specified then the files are unpacked in a folder called after the archive that is getting unpacked.
+
+Valid values for `game`:
+- Detect (default)
+- Common
+- DarkSouls2
+- DarkSouls3
+- Bloodborne
+- Sekiro
+- EldenRing
+
+Valid values for `<file type>`:
+- Detect (default)
+- Folder
+- Regulation
+- Dcx
+- EncryptedBdt
+- EncryptedBhd
+- Bdt
+- Bhd
+- Bnd
+- Savegame
+- Tpf
+- Param
+- Fmg
+- Enfl
 
 ## Examples
 

@@ -26,6 +26,12 @@ namespace BinderTool
         [Option("extract-param", Default = false, HelpText = "Automatically extract param files instead of outputting the .param")]
         public bool AutoExtractParam { get; set; }
 
+        [Option("extract-fmg", Default = false, HelpText = "Automatically extract fmg files instead of outputting the .fmg")]
+        public bool AutoExtractFmg { get; set; }
+
+        [Option("extract-enfl", Default =false, HelpText = "Automatically extract enfl files instead of outputting the .enfl")]
+        public bool AutoExtractEnfl { get; set; }
+
         [Option('r', "recurse", Default = false, HelpText = "When using folder input, recurse to child folders")]
         public bool Recurse { get; set; }
 
@@ -38,6 +44,8 @@ namespace BinderTool
                 OutputPath = OutputPath,
                 AutoExtractBnd = AutoExtractBnd,
                 AutoExtractParam = AutoExtractParam,
+                AutoExtractFmg = AutoExtractFmg,
+                AutoExtractEnfl = AutoExtractEnfl,
                 Recurse = Recurse
             };
         }

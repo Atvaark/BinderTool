@@ -16,19 +16,34 @@ namespace BinderTool.Core.Bhd5
         public static Bhd5BucketEntry Read(BinaryReader reader, GameVersion version)
         {
             Bhd5BucketEntry result = new Bhd5BucketEntry();
-            result.FileNameHash = reader.ReadUInt64();
-            result.PaddedFileSize = reader.ReadUInt32();
-            result.FileSize = reader.ReadUInt32();
-            if (result.FileSize != 0)
-            {
-                //Console.WriteLine("FS not 0");
+            long saltedHashOffset;
+            long aesKeyOffset;
+            if (version == GameVersion.EldenRing) {
+                result.FileNameHash = reader.ReadUInt64();
+                result.PaddedFileSize = reader.ReadUInt32();
+                result.FileSize = reader.ReadUInt32();
+                if (result.FileSize == 0) result.FileSize = result.PaddedFileSize;
+                result.FileOffset = reader.ReadInt64();
+
+                saltedHashOffset = reader.ReadInt64();
+                aesKeyOffset = reader.ReadInt64();
+            } else {
+                result.FileNameHash = reader.ReadUInt32();
+                result.PaddedFileSize = reader.ReadUInt32();
+                result.FileOffset = reader.ReadInt64();
+                saltedHashOffset = reader.ReadInt64();
+                aesKeyOffset = reader.ReadInt64();
+
+                switch (version) {
+                    case GameVersion.DarkSouls3:
+                    case GameVersion.Sekiro:
+                        result.FileSize = reader.ReadInt64();
+                        break;
+                    default:
+                        result.FileSize = result.PaddedFileSize;
+                        break;
+                }
             }
-            result.FileOffset = reader.ReadInt64();
-
-            long saltedHashOffset = reader.ReadInt64();
-            long aesKeyOffset = reader.ReadInt64();
-
-            
 
             if (saltedHashOffset != 0)
             {
