@@ -9,11 +9,11 @@ namespace BinderTool
     {
         public GameVersion InputGameVersion { get; set; }
 
-        public FileType InputType { get; private set; }
+        public FileType InputType { get; set; }
 
-        public string InputPath { get; private set; }
+        public string InputPath { get; set; }
 
-        public string OutputPath { get; private set; }
+        public string OutputPath { get; set; }
 
         internal static Options Parse(string[] args)
         {

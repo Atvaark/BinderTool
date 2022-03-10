@@ -12,7 +12,11 @@ namespace BinderTool
 
         private static readonly Dictionary<string, string> SekiroRsaKeyDictionary;
 
+        private static readonly Dictionary<string, string> ErRsaKeyDictionary;
+
         private static readonly Dictionary<string, byte[]> Ds3AesKeyDictionary;
+
+        private static readonly Dictionary<string, byte[]> ErAesKeyDictionary;
 
         static DecryptionKeys()
         {
@@ -37,10 +41,23 @@ namespace BinderTool
                 { "Data.bhd", SekiroArtworkKey }
             };
 
+            ErRsaKeyDictionary = new Dictionary<string, string>(StringComparer.InvariantCultureIgnoreCase)
+            {
+                { "Data0.bhd", ErData0Key },
+                { "Data1.bhd", ErData1Key },
+                { "Data2.bhd", ErData2Key },
+                { "Data3.bhd", ErData3Key },
+            };
+
             Ds3AesKeyDictionary = new Dictionary<string, byte[]>(StringComparer.InvariantCultureIgnoreCase)
             {
                 { "regulation.regbnd.dcx.enc", RegulationFileKeyDs3 },
                 { "enc_regulation.bnd.dcx", RegulationFileKeyDs2 },
+            };
+
+            ErAesKeyDictionary = new Dictionary<string, byte[]>(StringComparer.InvariantCultureIgnoreCase)
+            {
+                { "regulation.regbnd.dcx.enc", RegulationFileKeyEr },
             };
         }
         
@@ -52,15 +69,26 @@ namespace BinderTool
                     return Ds3RsaKeyDictionary.TryGetValue(file, out key);
                 case GameVersion.Sekiro:
                     return SekiroRsaKeyDictionary.TryGetValue(file, out key);
+                case GameVersion.EldenRing:
+                    return ErRsaKeyDictionary.TryGetValue(file, out key);
             }
 
             key = null;
             return false;
         }
 
-        public static bool TryGetAesFileKey(string file, out byte[] key)
+        public static bool TryGetAesFileKey(GameVersion version, string file, out byte[] key)
         {
-            return Ds3AesKeyDictionary.TryGetValue(file, out key);
+            switch (version)
+            {
+                case GameVersion.DarkSouls3:
+                case GameVersion.DarkSouls2:
+                    return Ds3AesKeyDictionary.TryGetValue(file, out key);
+                case GameVersion.EldenRing:
+                    return ErAesKeyDictionary.TryGetValue(file, out key);
+            }
+            key = null;
+            return false;
         }
 
         /// <summary>
@@ -92,7 +120,13 @@ namespace BinderTool
         /// <see cref="UserDataKeyDs3"/>
         /// </summary>
         public static readonly byte[] RegulationFileKeyDs3 = Encoding.ASCII.GetBytes("ds3#jn/8_7(rsY9pg55GFN7VFL#+3n/)");
-        
+
+        public static readonly byte[] RegulationFileKeyEr =
+        {
+            0x99, 0xBF, 0xFC, 0x36, 0x6A, 0x6B, 0xC8, 0xC6, 0xF5, 0x82, 0x7D, 0x09, 0x36, 0x02, 0xD6, 0x76,
+            0xC4, 0x28, 0x92, 0xA0, 0x1C, 0x20, 0x7F, 0xB0, 0x24, 0xD3, 0xAF, 0x4E, 0x49, 0x3F, 0xEF, 0x99
+        };
+
         public static readonly byte[] RegulationFileKeyDs2 =
         {
             0x40, 0x17, 0x81, 0x30, 0xDF, 0x0A, 0x94, 0x54,
@@ -258,6 +292,46 @@ plGCovqnioRoaFf4gVZDsbpVXIGNXwWsL5kArQiQo3ZrMs17/t77yZ6avC/1hnFp
 ks1k3uQ269NKZOpU6Q73I8yolUFGJFBlm9uHqRfZC0wcA+IXjo96C1PoTKJQktkh
 J07MPeoeckkAGdUv9S+kcDN04SAGMJJBWB9OOvn2Qle938gmCY6beeuk8c/l67zs
 ChgwGmsLdVr7W6hZL3aNvsf/BWFQ+e7+tQIFANZbM50=
+-----END RSA PUBLIC KEY-----";
+
+        private const string ErData0Key =
+@"-----BEGIN RSA PUBLIC KEY-----
+MIIBCwKCAQEA9Rju2whruXDVQZpfylVEPeNxm7XgMHcDyaaRUIpXQE0qEo+6Y36L
+P0xpFvL0H0kKxHwpuISsdgrnMHJ/yj4S61MWzhO8y4BQbw/zJehhDSRCecFJmFBz
+3I2JC5FCjoK+82xd9xM5XXdfsdBzRiSghuIHL4qk2WZ/0f/nK5VygeWXn/oLeYBL
+jX1S8wSSASza64JXjt0bP/i6mpV2SLZqKRxo7x2bIQrR1yHNekSF2jBhZIgcbtMB
+xjCywn+7p954wjcfjxB5VWaZ4hGbKhi1bhYPccht4XnGhcUTWO3NmJWslwccjQ4k
+sutLq3uRjLMM0IeTkQO6Pv8/R7UNFtdCWwIERzH8IQ==
+-----END RSA PUBLIC KEY-----";
+
+        private const string ErData1Key =
+@"-----BEGIN RSA PUBLIC KEY-----
+MIIBCwKCAQEAxaBCHQJrtLJiJNdG9nq3deA9sY4YCZ4dbTOHO+v+YgWRMcE6iK6o
+ZIJq+nBMUNBbGPmbRrEjkkH9M7LAypAFOPKC6wMHzqIMBsUMuYffulBuOqtEBD11
+CAwfx37rjwJ+/1tnEqtJjYkrK9yyrIN6Y+jy4ftymQtjk83+L89pvMMmkNeZaPON
+4O9q5M9PnFoKvK8eY45ZV/Jyk+Pe+xc6+e4h4cx8ML5U2kMM3VDAJush4z/05hS3
+/bC4B6K9+7dPwgqZgKx1J7DBtLdHSAgwRPpijPeOjKcAa2BDaNp9Cfon70oC+ZCB
++HkQ7FjJcF7KaHsH5oHvuI7EZAl2XTsLEQIENa/2JQ==
+-----END RSA PUBLIC KEY-----";
+
+        private const string ErData2Key =
+@"-----BEGIN RSA PUBLIC KEY-----
+MIIBDAKCAQEA0iDVVQ230RgrkIHJNDgxE7I/2AaH6Li1Eu9mtpfrrfhfoK2e7y4O
+WU+lj7AGI4GIgkWpPw8JHaV970Cr6+sTG4Tr5eMQPxrCIH7BJAPCloypxcs2BNfT
+GXzm6veUfrGzLIDp7wy24lIA8r9ZwUvpKlN28kxBDGeCbGCkYeSVNuF+R9rN4OAM
+RYh0r1Q950xc2qSNloNsjpDoSKoYN0T7u5rnMn/4mtclnWPVRWU940zr1rymv4Jc
+3umNf6cT1XqrS1gSaK1JWZfsSeD6Dwk3uvquvfY6YlGRygIlVEMAvKrDRMHylsLt
+qqhYkZNXMdy0NXopf1rEHKy9poaHEmJldwIFAP////8=
+-----END RSA PUBLIC KEY-----";
+
+        private const string ErData3Key =
+@"-----BEGIN RSA PUBLIC KEY-----
+MIIBCwKCAQEAvRRNBnVq3WknCNHrJRelcEA2v/OzKlQkxZw1yKll0Y2Kn6G9ts94
+SfgZYbdFCnIXy5NEuyHRKrxXz5vurjhrcuoYAI2ZUhXPXZJdgHywac/i3S/IY0V/
+eDbqepyJWHpP6I565ySqlol1p/BScVjbEsVyvZGtWIXLPDbx4EYFKA5B52uK6Gdz
+4qcyVFtVEhNoMvg+EoWnyLD7EUzuB2Khl46CuNictyWrLlIHgpKJr1QD8a0ld0PD
+PHDZn03q6QDvZd23UW2d9J+/HeBt52j08+qoBXPwhndZsmPMWngQDaik6FM7EVRQ
+etKPi6h5uprVmMAS5wR/jQIVTMpTj/zJdwIEXszeQw==
 -----END RSA PUBLIC KEY-----";
     }
 }

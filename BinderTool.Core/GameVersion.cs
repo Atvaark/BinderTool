@@ -6,6 +6,7 @@
         DarkSouls2,
         DarkSouls3,
         Bloodborne,
-        Sekiro
+        Sekiro,
+        EldenRing
     }
 }

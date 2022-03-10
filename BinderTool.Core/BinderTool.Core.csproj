@@ -75,6 +75,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Bdf4\Bdf4FileStream.cs" />
+    <Compile Include="Bdt5\Bdt5InnerStream.cs" />
     <Compile Include="Bhd5\Bhd5Range.cs" />
     <Compile Include="Bdt5\Bdt5FileStream.cs" />
     <Compile Include="Bhd5\Bhd5AesKey.cs" />

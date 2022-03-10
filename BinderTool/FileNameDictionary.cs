@@ -302,6 +302,7 @@ namespace BinderTool
         public static FileNameDictionary OpenFromFile(string dictionaryPath, GameVersion version)
         {
             var dictionary = new FileNameDictionary(version);
+            if (!File.Exists(dictionaryPath)) return dictionary;
 
             string[] lines = File.ReadAllLines(dictionaryPath);
             foreach (string line in lines)

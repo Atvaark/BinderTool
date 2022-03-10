@@ -12,15 +12,21 @@ namespace BinderTool.Core.Bdt5
             _inputStream = inputStream;
         }
 
-        public MemoryStream Read(long fileOffset, long fileSize)
+        public Stream Read(long fileOffset, long fileSize)
         {
             if (fileOffset + fileSize > _inputStream.Length)
                 throw new EndOfStreamException();
             _inputStream.Seek(fileOffset, SeekOrigin.Begin);
 
-            byte[] buffer = new byte[fileSize];
-            _inputStream.Read(buffer, 0, (int) fileSize);
-            return new MemoryStream(buffer);
+            if (fileSize < Bdt5InnerStream.MAX_STREAM_LEN)
+            {
+                byte[] buffer = new byte[fileSize];
+                _inputStream.Read(buffer, 0, (int)fileSize);
+                return new MemoryStream(buffer);
+            }
+            var ans = new Bdt5InnerStream(_inputStream, fileSize);
+            _inputStream.Seek(fileSize, SeekOrigin.Current);
+            return ans;
         }
 
         public static Bdt5FileStream OpenFile(string path, FileMode mode, FileAccess access)

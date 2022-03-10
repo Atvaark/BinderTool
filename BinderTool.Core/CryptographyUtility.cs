@@ -1,5 +1,6 @@
 ﻿using System;
 using System.IO;
+using BinderTool.Core.Bdt5;
 using BinderTool.Core.Bhd5;
 using Org.BouncyCastle.Crypto;
 using Org.BouncyCastle.Crypto.Engines;
@@ -11,62 +12,65 @@ namespace BinderTool.Core
 {
     public static class CryptographyUtility
     {
-        public static MemoryStream DecryptAesEcb(Stream inputStream, byte[] key)
+        public static Stream DecryptAesEcb(Stream inputStream, byte[] key)
         {
             var cipher = CreateAesEcbCipher(key);
             return DecryptAes(inputStream, cipher, inputStream.Length);
         }
 
-        public static MemoryStream DecryptAesCbc(Stream inputStream, byte[] key, byte[] iv)
+        public static Stream DecryptAesCbc(Stream inputStream, byte[] key, byte[] iv)
         {
-            AesEngine engine = new AesEngine();
+            var engine = new CbcBlockCipher(new AesEngine());
             KeyParameter keyParameter = new KeyParameter(key);
             ICipherParameters parameters = new ParametersWithIV(keyParameter, iv);
 
-            BufferedBlockCipher cipher = new BufferedBlockCipher(new CbcBlockCipher(engine));
-            cipher.Init(false, parameters);
-            return DecryptAes(inputStream, cipher, inputStream.Length);
+            engine.Init(false, parameters);
+            return DecryptAes(inputStream, engine, inputStream.Length);
         }
 
-        public static MemoryStream DecryptAesCtr(Stream inputStream, byte[] key, byte[] iv)
+        public static Stream DecryptAesCtr(Stream inputStream, byte[] key, byte[] iv)
         {
-            AesEngine engine = new AesEngine();
+            SicBlockCipher engine = new SicBlockCipher(new AesEngine());
             KeyParameter keyParameter = new KeyParameter(key);
             ICipherParameters parameters = new ParametersWithIV(keyParameter, iv);
 
-            BufferedBlockCipher cipher = new BufferedBlockCipher(new SicBlockCipher(engine));
-            cipher.Init(false, parameters);
-            return DecryptAes(inputStream, cipher, inputStream.Length);
+            engine.Init(false, parameters);
+            return DecryptAes(inputStream, engine, inputStream.Length);
         }
 
-        private static BufferedBlockCipher CreateAesEcbCipher(byte[] key)
+        private static IBlockCipher CreateAesEcbCipher(byte[] key)
         {
             AesEngine engine = new AesEngine();
             KeyParameter parameter = new KeyParameter(key);
-            BufferedBlockCipher cipher = new BufferedBlockCipher(engine);
-            cipher.Init(false, parameter);
-            return cipher;
+            engine.Init(false, parameter);
+            return engine;
         }
 
-        private static MemoryStream DecryptAes(Stream inputStream, BufferedBlockCipher cipher, long length)
+        private static Stream DecryptAes(Stream inputStream, IBlockCipher cipher, long length)
         {
             int blockSize = cipher.GetBlockSize();
-            int inputLength = (int)length;
-            int paddedLength = inputLength;
+            long inputLength = length;
+            long paddedLength = inputLength;
             if (paddedLength % blockSize > 0)
             {
                 paddedLength += blockSize - paddedLength % blockSize;
             }
 
-            byte[] input = new byte[paddedLength];
-            byte[] output = new byte[cipher.GetOutputSize(paddedLength)];
+            byte[] input = new byte[blockSize];
+            byte[] output = new byte[blockSize];
+            var outputStream = new Bdt5.Bdt5InnerStream(paddedLength);
 
-            inputStream.Read(input, 0, inputLength);
-            int len = cipher.ProcessBytes(input, 0, input.Length, output, 0);
-            cipher.DoFinal(output, len);
+            for (long pos = 0; pos < inputLength; pos += blockSize)
+            {
+                int read = inputStream.Read(input, 0, blockSize);
+                if (read < blockSize)
+                {
+                    for (int i = read; i < blockSize; i++) input[i] = 0;
+                }
+                cipher.ProcessBlock(input, 0, output, 0);
+                outputStream.Write(output, 0, blockSize);
+            }
 
-            MemoryStream outputStream = new MemoryStream();
-            outputStream.Write(output, 0, inputLength);
             outputStream.Seek(0, SeekOrigin.Begin);
             return outputStream;
         }
@@ -135,7 +139,7 @@ namespace BinderTool.Core
             }
         }
 
-        public static void DecryptAesEcb(MemoryStream inputStream, byte[] key, Bhd5Range[] ranges)
+        public static void DecryptAesEcb(Stream inputStream, byte[] key, Bhd5Range[] ranges)
         {
             var cipher = CreateAesEcbCipher(key);
 
@@ -148,9 +152,14 @@ namespace BinderTool.Core
 
                 inputStream.Position = range.StartOffset;
                 long length = range.EndOffset - range.StartOffset;
-                MemoryStream decryptedStream = DecryptAes(inputStream, cipher, length);
+                Stream decryptedStream = DecryptAes(inputStream, cipher, length);
                 inputStream.Position = range.StartOffset;
-                decryptedStream.WriteTo(inputStream);
+                byte[] buf = new byte[1000];
+                for (long pos = 0; pos < length; pos += buf.Length)
+                {
+                    int read = decryptedStream.Read(buf, 0, 1000);
+                    inputStream.Write(buf, 0, read);
+                }
             }
         }
     }

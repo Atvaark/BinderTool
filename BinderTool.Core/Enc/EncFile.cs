@@ -19,7 +19,7 @@ namespace BinderTool.Core.Enc
 
         private readonly byte[] _iv = new byte[EncryptionIvCbcSize];
 
-        public MemoryStream Data { get; private set; }
+        public Stream Data { get; private set; }
 
         public static EncFile ReadEncFile(Stream inputStream, byte[] key, GameVersion version = GameVersion.Common)
         {

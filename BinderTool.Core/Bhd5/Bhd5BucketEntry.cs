@@ -1,10 +1,11 @@
-﻿using System.IO;
+﻿using System;
+using System.IO;
 
 namespace BinderTool.Core.Bhd5
 {
     public class Bhd5BucketEntry
     {
-        public uint FileNameHash { get; private set; }
+        public ulong FileNameHash { get; private set; }
         public long FileSize { get; set; }
         public long PaddedFileSize { get; set; }
         public long FileOffset { get; private set; }
@@ -15,22 +16,19 @@ namespace BinderTool.Core.Bhd5
         public static Bhd5BucketEntry Read(BinaryReader reader, GameVersion version)
         {
             Bhd5BucketEntry result = new Bhd5BucketEntry();
-            result.FileNameHash = reader.ReadUInt32();
+            result.FileNameHash = reader.ReadUInt64();
             result.PaddedFileSize = reader.ReadUInt32();
+            result.FileSize = reader.ReadUInt32();
+            if (result.FileSize != 0)
+            {
+                //Console.WriteLine("FS not 0");
+            }
             result.FileOffset = reader.ReadInt64();
+
             long saltedHashOffset = reader.ReadInt64();
             long aesKeyOffset = reader.ReadInt64();
 
-            switch (version)
-            {
-                case GameVersion.DarkSouls3:
-                case GameVersion.Sekiro:
-                    result.FileSize = reader.ReadInt64();
-                    break;
-                default:
-                    result.FileSize = result.PaddedFileSize;
-                    break;
-            }
+            
 
             if (saltedHashOffset != 0)
             {

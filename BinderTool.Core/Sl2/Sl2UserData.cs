@@ -21,8 +21,10 @@ namespace BinderTool.Core.Sl2
 
         public byte[] EncryptedUserData { get; private set; }
 
-        public byte[] DecryptedUserData => CryptographyUtility.DecryptAesCbc(new MemoryStream(EncryptedUserData), _key, _iv).ToArray();
-        
+        //public byte[] DecryptedUserData => CryptographyUtility.DecryptAesCbc(new MemoryStream(EncryptedUserData), _key, _iv).ToArray();
+        public byte[] DecryptedUserData => null;
+
+
         public static Sl2UserData ReadSl2UserData(Stream inputStream, byte[] key, int size, string name)
         {
             Sl2UserData sl2UserData = new Sl2UserData(key);

@@ -22,13 +22,14 @@ namespace BinderTool
     {
         private static void Main(string[] args)
         {
+            
+            Options options;
             if (args.Length == 0)
             {
                 ShowUsageInfo();
                 return;
             }
 
-            Options options;
             try
             {
                 options = Options.Parse(args);
@@ -123,7 +124,7 @@ namespace BinderTool
                 {
                     foreach (var entry in bucket.GetEntries())
                     {
-                        MemoryStream data;
+                        Stream data;
                         if (entry.FileSize == 0)
                         {
                             long fileSize;
@@ -141,7 +142,7 @@ namespace BinderTool
                             data = bdtStream.Read(entry.FileOffset, entry.PaddedFileSize);
                             CryptographyUtility.DecryptAesEcb(data, entry.AesKey.Key, entry.AesKey.Ranges);
                             data.Position = 0;
-                            data.SetLength(entry.FileSize);
+                            //data.SetLength(entry.FileSize);
                         }
                         else
                         {
@@ -176,7 +177,7 @@ namespace BinderTool
                         if (extension == ".enc")
                         {
                             byte[] decryptionKey;
-                            if (DecryptionKeys.TryGetAesFileKey(Path.GetFileName(fileName), out decryptionKey))
+                            if (DecryptionKeys.TryGetAesFileKey(options.InputGameVersion, Path.GetFileName(fileName), out decryptionKey))
                             {
                                 EncFile encFile = EncFile.ReadEncFile(data, decryptionKey);
                                 data = encFile.Data;
@@ -220,9 +221,22 @@ namespace BinderTool
                             entry.IsEncrypted,
                             fileNameFound);
 
+                        if (extension == ".bnd")
+                        {
+                            UnpackBndFile(data, options.OutputPath + "\\bnd");
+                            continue;
+                        }
                         string newFileNamePath = Path.Combine(options.OutputPath, fileName);
                         Directory.CreateDirectory(Path.GetDirectoryName(newFileNamePath));
-                        File.WriteAllBytes(newFileNamePath, data.ToArray());
+                        FileStream outS = new FileStream(newFileNamePath, FileMode.OpenOrCreate);
+                        byte[] buf = new byte[1000];
+                        data.Seek(0, SeekOrigin.Begin);
+                        for (long pos = 0; pos < data.Length; pos += buf.Length)
+                        {
+                            int read = data.Read(buf, 0, buf.Length);
+                            outS.Write(buf, 0, read);
+                        }
+                        outS.Close();
                     }
                 }
             }
@@ -233,7 +247,7 @@ namespace BinderTool
             fileSize = 0;
 
             const int sampleLength = 48;
-            MemoryStream data = bdtStream.Read(entry.FileOffset, sampleLength);
+            Stream data = bdtStream.Read(entry.FileOffset, sampleLength);
 
             if (entry.IsEncrypted)
             {
@@ -251,7 +265,7 @@ namespace BinderTool
             return true;
         }
 
-        private static string GetDataExtension(MemoryStream data)
+        private static string GetDataExtension(Stream data)
         {
             string signature;
             string extension;
@@ -279,19 +293,19 @@ namespace BinderTool
             return ".bin";
         }
 
-        private static bool TryGetAsciiSignature(MemoryStream stream, int signatureLength, out string signature)
+        private static bool TryGetAsciiSignature(Stream stream, int signatureLength, out string signature)
         {
             const int asciiBytesPerChar = 1;
             return TryGetSignature(stream, Encoding.ASCII, asciiBytesPerChar, signatureLength, out signature);
         }
 
-        private static bool TryGetUnicodeSignature(MemoryStream stream, int signatureLength, out string signature)
+        private static bool TryGetUnicodeSignature(Stream stream, int signatureLength, out string signature)
         {
             const int unicodeBytesPerChar = 2;
             return TryGetSignature(stream, Encoding.Unicode, unicodeBytesPerChar, signatureLength, out signature);
         }
 
-        private static bool TryGetSignature(MemoryStream stream, Encoding encoding, int bytesPerChar, int signatureLength, out string signature)
+        private static bool TryGetSignature(Stream stream, Encoding encoding, int bytesPerChar, int signatureLength, out string signature)
         {
             signature = null;
 
@@ -319,7 +333,7 @@ namespace BinderTool
                     extension = ".bhd";
                     return true;
                 case "BDF4":
-                    extension = ".bdt";
+                    extension = ".bdf";
                     return true;
                 case "DCX\0":
                     extension = ".dcx";
@@ -439,11 +453,15 @@ namespace BinderTool
 
             foreach (var entry in file.Entries)
             {
-                string fileName = FileNameDictionary.NormalizeFileName(entry.FileName);
-                string outputFilePath = Path.Combine(outputPath, fileName);
-
-                Directory.CreateDirectory(Path.GetDirectoryName(outputFilePath));
-                File.WriteAllBytes(outputFilePath, entry.EntryData);
+                try
+                {
+                    string fileName = FileNameDictionary.NormalizeFileName(entry.FileName);
+                    string outputFilePath = Path.Combine(outputPath, fileName);
+                    //continue;
+                    Directory.CreateDirectory(Path.GetDirectoryName(outputFilePath));
+                    File.WriteAllBytes(outputFilePath, entry.EntryData);
+                }
+                catch (Exception e) { }
             }
         }
 
@@ -501,6 +519,9 @@ namespace BinderTool
                     break;
                 case GameVersion.DarkSouls3:
                     key = DecryptionKeys.RegulationFileKeyDs3;
+                    break;
+                case GameVersion.EldenRing:
+                    key = DecryptionKeys.RegulationFileKeyEr;
                     break;
                 default:
                     key = new byte[16];
@@ -614,6 +635,7 @@ namespace BinderTool
                     break;
                 case GameVersion.DarkSouls3:
                 case GameVersion.Sekiro:
+                case GameVersion.EldenRing:
                     DecryptionKeys.TryGetRsaFileKey(version, fileName, out key);
                     break;
             }
