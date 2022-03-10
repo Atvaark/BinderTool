@@ -2,77 +2,68 @@
 using System.IO;
 using System.Text.RegularExpressions;
 using BinderTool.Core;
+using CommandLine;
 
 namespace BinderTool
 {
     internal class Options
     {
+        [Option('g', "game", Default = GameVersion.Detect, HelpText = "The game the file(s) are from")]
         public GameVersion InputGameVersion { get; set; }
 
+        [Option('t', "type", Default = FileType.Detect, HelpText = "The type of file to extract. Can be detected in some cases.")]
         public FileType InputType { get; set; }
 
+        [Value(0, Required = true, HelpText = "The input file or folder")]
         public string InputPath { get; set; }
 
+        [Value(1, Required = false, Default = null, HelpText = "The output file or folder")]
         public string OutputPath { get; set; }
 
-        internal static Options Parse(string[] args)
+        [Option("extract-bnd", Default = false, HelpText = "Automatically extract bnd files instead of outputting the .bnf")]
+        public bool AutoExtractBnd { get; set; }
+
+        [Option("extract-param", Default = false, HelpText = "Automatically extract param files instead of outputting the .param")]
+        public bool AutoExtractParam { get; set; }
+
+        [Option('r', "recurse", Default = false, HelpText = "When using folder input, recurse to child folders")]
+        public bool Recurse { get; set; }
+
+        public Options Clone()
         {
-            Options options = new Options();
-            if (args.Length == 0)
-            {
-                throw new FormatException("Missing arguments");
-            }
-
-            options.InputPath = args[0];
-            if (File.Exists(options.InputPath) == false)
-            {
-                throw new FormatException("Input file not found");
-            }
-
-            (FileType type, GameVersion version) fileType = GetFileType(Path.GetFileName(options.InputPath));
-            options.InputType = fileType.type;
-            options.InputGameVersion = fileType.version;
-
-            // TODO: GameVersion parameter (ds3 or sekiro)
-
-            if (options.InputType == FileType.Unknown)
-            {
-                throw new FormatException("Unsupported input file format");
-            }
-
-            if (args.Length >= 2)
-            {
-                options.OutputPath = args[1];
-            }
-            else
-            {
-                options.OutputPath = Path.Combine(
-                    Path.GetDirectoryName(options.InputPath),
-                    Path.GetFileNameWithoutExtension(options.InputPath));
-                switch (options.InputType)
-                {
-                    case FileType.EncryptedBhd:
-                        options.OutputPath += "_decrypted.bhd";
-                        break;
-                    case FileType.Dcx:
-                    case FileType.Fmg:
-                        break;
-                }
-            }
-
-            return options;
+            return new Options {
+                InputGameVersion = InputGameVersion,
+                InputType = InputType,
+                InputPath = InputPath,
+                OutputPath = OutputPath,
+                AutoExtractBnd = AutoExtractBnd,
+                AutoExtractParam = AutoExtractParam,
+                Recurse = Recurse
+            };
         }
 
-        private static (FileType, GameVersion) GetFileType(string fileName)
+        public static (FileType, GameVersion) GetFileType(string path)
         {
-            if (fileName == null)
+            if (path == null)
             {
-                throw new ArgumentNullException(nameof(fileName));
+                throw new ArgumentNullException(nameof(path));
             }
+
+            if (Directory.Exists(path)) return (FileType.Folder, GameVersion.Common);
+
+            var info = new FileInfo(path);
+            var fileName = Path.GetFileName(path);
 
             if (fileName == "Data0.bdt")
             {
+                //ds3 data0 should be smaller than 10mb
+                if (info.Length > 10_000_000) return (FileType.EncryptedBdt, GameVersion.EldenRing);
                 return (FileType.Regulation, GameVersion.DarkSouls3);
+            }
+
+            if (fileName == "regulation.bin")
+            {
+                return (FileType.Regulation, GameVersion.EldenRing);
             }
 
             if (fileName == "enc_regulation.bnd.dcx")
@@ -106,6 +97,10 @@ namespace BinderTool
                 return (FileType.Bnd, GameVersion.Common);
             }
 
+            if (fileName.EndsWith("enfl") || fileName.EndsWith("entryfilelist")) {
+                return (FileType.Enfl, GameVersion.Common);
+            }
+
             // DS30000.sl2
             if (Regex.IsMatch(fileName, @"^DS3\d+.*\.sl2", RegexOptions.IgnoreCase))
             {
@@ -120,8 +115,14 @@ namespace BinderTool
             
             if (Regex.IsMatch(fileName, @"^(?:Data|DLC)\d?\.bdt$", RegexOptions.IgnoreCase))
             {
-                //return (FileType.EncryptedBdt, GameVersion.DarkSouls3);
-                return (FileType.EncryptedBdt, GameVersion.Sekiro);
+                var parentFolder = Directory.GetParent(path).FullName;
+                var hasSekiro = File.Exists(parentFolder + @"\sekiro.exe");
+                var hasER = File.Exists(parentFolder + @"\eldenring.exe") || File.Exists(parentFolder + @"\start_protected_game.exe");
+                var hasDS3 = File.Exists(parentFolder + @"\DarkSoulsIII.exe");
+                if (hasSekiro) return (FileType.EncryptedBdt, GameVersion.Sekiro);
+                if (hasER) return (FileType.EncryptedBdt, GameVersion.EldenRing);
+                if (hasDS3) return (FileType.EncryptedBdt, GameVersion.DarkSouls3);
+                return (FileType.EncryptedBdt, GameVersion.Detect);
             }
 
             if (Regex.IsMatch(fileName, @"^[^\W_]+Ebl\.bdt$", RegexOptions.IgnoreCase))
@@ -131,8 +132,14 @@ namespace BinderTool
 
             if (Regex.IsMatch(fileName, @"^(?:Data|DLC|)\d?\.bhd$", RegexOptions.IgnoreCase))
             {
-                //return (FileType.EncryptedBhd, GameVersion.DarkSouls3);
-                return (FileType.EncryptedBhd, GameVersion.Sekiro);
+                var parentFolder = Directory.GetParent(path).FullName;
+                var hasSekiro = File.Exists(parentFolder + @"\sekiro.exe");
+                var hasER = File.Exists(parentFolder + @"\eldenring.exe") || File.Exists(parentFolder + @"\start_protected_game.exe");
+                var hasDS3 = File.Exists(parentFolder + @"\DarkSoulsIII.exe");
+                if (hasSekiro) return (FileType.EncryptedBhd, GameVersion.Sekiro);
+                if (hasER) return (FileType.EncryptedBhd, GameVersion.EldenRing);
+                if (hasDS3) return (FileType.EncryptedBhd, GameVersion.DarkSouls3);
+                return (FileType.EncryptedBhd, GameVersion.Detect);
             }
 
             if (Regex.IsMatch(fileName, @"^[^\W_]+Ebl\.bhd$", RegexOptions.IgnoreCase))

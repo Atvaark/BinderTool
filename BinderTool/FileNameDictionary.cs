@@ -294,6 +294,9 @@ namespace BinderTool
                 case GameVersion.Sekiro:
                     dictionaryName = "DictionarySekiro.csv";
                     break;
+                case GameVersion.EldenRing:
+                    dictionaryName = "DictionaryER.csv";
+                    break;
             }
             string dictionaryPath = Path.Combine(dictionaryDirectory, dictionaryName);
             return OpenFromFile(dictionaryPath, version);

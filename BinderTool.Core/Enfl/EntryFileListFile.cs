@@ -6,7 +6,7 @@ namespace BinderTool.Core.Enfl
 {
     public class EntryFileListFile
     {
-        private class EntryFileListEntry1
+        public class EntryFileListEntry1
         {
             public short Unknown1 { get; set; }
 
@@ -21,7 +21,7 @@ namespace BinderTool.Core.Enfl
             }
         }
 
-        private class EntryFileListEntry2
+        public class EntryFileListEntry2
         {
             public uint Unknown1 { get; set; }
 
@@ -37,7 +37,11 @@ namespace BinderTool.Core.Enfl
                 return entry;
             }
         }
-        
+
+        public EntryFileListEntry1[] array1;
+        public EntryFileListEntry2[] array2;
+
+
         public static EntryFileListFile ReadEntryFileListFile(Stream inputStream)
         {
             EntryFileListFile entryFileListFile = new EntryFileListFile();
@@ -55,7 +59,7 @@ namespace BinderTool.Core.Enfl
             int count2 = reader.ReadInt32();
             int unknown2 = reader.ReadInt32(); // 0
 
-            EntryFileListEntry1[] array1 = new EntryFileListEntry1[count1];
+            array1 = new EntryFileListEntry1[count1];
             for (int i = 0; i < count1; i++)
             {
                 array1[i] = EntryFileListEntry1.ReadEntryFileListEntry1(reader);
@@ -63,7 +67,7 @@ namespace BinderTool.Core.Enfl
 
             reader.Align(16);
 
-            EntryFileListEntry2[] array2 = new EntryFileListEntry2[count2];
+            array2 = new EntryFileListEntry2[count2];
             for (int i = 0; i < count2; i++)
             {
                 array2[i] = EntryFileListEntry2.ReadEntryFileListEntry2(reader);

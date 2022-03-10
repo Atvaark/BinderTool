@@ -15,6 +15,11 @@ using BinderTool.Core.Fmg;
 using BinderTool.Core.Param;
 using BinderTool.Core.Sl2;
 using BinderTool.Core.Tpf;
+using CommandLine;
+using System.Linq;
+using System.Linq.Expressions;
+using System.Collections.Generic;
+using BinderTool.Core.Enfl;
 
 namespace BinderTool
 {
@@ -22,24 +27,92 @@ namespace BinderTool
     {
         private static void Main(string[] args)
         {
-            
-            Options options;
-            if (args.Length == 0)
-            {
-                ShowUsageInfo();
-                return;
+
+            var options = Parser.Default.ParseArguments<Options>(args).MapResult(
+                o => o,
+                e => { e.Select(v => { Console.WriteLine(v); return 0; }); return null; }
+            );
+            if (options == null) return;
+
+            if (!File.Exists(options.InputPath) && !Directory.Exists(options.InputPath)) {
+                throw new FormatException("Input file not found");
             }
 
-            try
-            {
-                options = Options.Parse(args);
+            if (options.InputType == FileType.Detect || options.InputGameVersion == GameVersion.Detect) {
+                var (ty, g) = Options.GetFileType(options.InputPath);
+                if (options.InputType == FileType.Detect) options.InputType = ty;
+                if (options.InputGameVersion == GameVersion.Detect) options.InputGameVersion = g;
+                if (options.InputGameVersion == GameVersion.Detect && options.InputType != FileType.Folder) {
+                    Console.WriteLine("Unable to detect game verison. Please specify a game version.");
+                    return;
+                }
             }
-            catch (FormatException e)
-            {
-                Console.WriteLine(e.Message);
-                ShowUsageInfo();
-                return;
+
+            if (options.InputType == FileType.Unknown) {
+                throw new FormatException("Unsupported input file format");
             }
+
+            if (options.OutputPath == null) {
+                options.OutputPath = Path.Combine(
+                    Path.GetDirectoryName(options.InputPath),
+                    Path.GetFileNameWithoutExtension(options.InputPath));
+                switch (options.InputType) {
+                    case FileType.EncryptedBhd:
+                        options.OutputPath += "_decrypted.bhd";
+                        break;
+                    case FileType.Dcx:
+                    case FileType.Fmg:
+                        break;
+                }
+            }
+
+            if (options.InputType == FileType.Folder) {
+                Directory.CreateDirectory(options.OutputPath);
+                var stack = new List<string>();
+                stack.AddRange(Directory.EnumerateFiles(options.InputPath));
+                if (options.Recurse) stack.AddRange(Directory.EnumerateDirectories(options.InputPath));
+                while (stack.Count > 0) {
+                    var curr = stack[stack.Count - 1]; 
+                    stack.RemoveAt(stack.Count - 1);
+                    if (Directory.Exists(curr)) {
+                        stack.AddRange(Directory.EnumerateFiles(curr));
+                        continue;
+                    }
+                    var (ty, g) = Options.GetFileType(curr);
+                    if (ty == FileType.Unknown) {
+                        Console.WriteLine($"Skipping {curr} because the file type could not be detected");
+                        continue;
+                    }
+                    if (ty == FileType.Detect) {
+                        Console.WriteLine($"Skipping {curr} because the file type could not be detected");
+                        continue;
+                    }
+                    if (g == GameVersion.Detect) {
+                        if (options.InputGameVersion == GameVersion.Detect) {
+                            Console.WriteLine($"Skipping {curr} because the game could not be detected");
+                            continue;
+                        }
+                        g = options.InputGameVersion;
+                    }
+                    var opt = options.Clone();
+                    opt.InputGameVersion = g;
+                    opt.InputType = ty;
+                    opt.InputPath = curr;
+                    opt.OutputPath = options.OutputPath + '\\' + curr.Substring(options.InputPath.Length);
+                    try {
+                        Process(opt);
+                    } catch (Exception e) {
+                        Console.WriteLine($"Error processing {curr}:");
+                        Console.WriteLine(e);
+                    }
+                }
+            } else {
+                Process(options);
+            }
+
+        }
+
+        static void Process(Options options) {
 
             switch (options.InputType)
             {
@@ -48,6 +121,7 @@ namespace BinderTool
                 case FileType.Bhd:
                 case FileType.Dcx:
                 case FileType.Fmg:
+                case FileType.Enfl:
                     break;
                 default:
                     Directory.CreateDirectory(options.OutputPath);
@@ -88,6 +162,9 @@ namespace BinderTool
                     break;
                 case FileType.Fmg:
                     UnpackFmgFile(options);
+                    break;
+                case FileType.Enfl:
+                    UnpackEnflFile(options);
                     break;
                 default:
                     throw new ArgumentOutOfRangeException($"Unable to handle type '{options.InputType}'");
@@ -221,9 +298,13 @@ namespace BinderTool
                             entry.IsEncrypted,
                             fileNameFound);
 
-                        if (extension == ".bnd")
+                        if (options.AutoExtractBnd && extension == ".bnd")
                         {
-                            UnpackBndFile(data, options.OutputPath + "\\bnd");
+                            UnpackBndFile(data, options.OutputPath, options);
+                            continue;
+                        }
+                        if (options.AutoExtractParam && extension == ".param") {
+                            UnpackParamFile(data, fileNameWithoutExtension, options.OutputPath + '\\' + fileNameWithoutExtension);
                             continue;
                         }
                         string newFileNamePath = Path.Combine(options.OutputPath, fileName);
@@ -443,11 +524,11 @@ namespace BinderTool
         {
             using (FileStream inputStream = new FileStream(options.InputPath, FileMode.Open, FileAccess.Read))
             {
-                UnpackBndFile(inputStream, options.OutputPath);
+                UnpackBndFile(inputStream, options.OutputPath, options);
             }
         }
 
-        private static void UnpackBndFile(Stream inputStream, string outputPath)
+        private static void UnpackBndFile(Stream inputStream, string outputPath, Options options)
         {
             Bnd4File file = Bnd4File.ReadBnd4File(inputStream);
 
@@ -457,7 +538,10 @@ namespace BinderTool
                 {
                     string fileName = FileNameDictionary.NormalizeFileName(entry.FileName);
                     string outputFilePath = Path.Combine(outputPath, fileName);
-                    //continue;
+                    if (options.AutoExtractParam && fileName.EndsWith(".param")) {
+                        UnpackParamFile(new MemoryStream(entry.EntryData), fileName, outputFilePath);
+                        continue;
+                    }
                     Directory.CreateDirectory(Path.GetDirectoryName(outputFilePath));
                     File.WriteAllBytes(outputFilePath, entry.EntryData);
                 }
@@ -505,7 +589,7 @@ namespace BinderTool
                 byte[] key = GetRegulationKey(options.InputGameVersion);
                 EncFile encryptedFile = EncFile.ReadEncFile(inputStream, key, options.InputGameVersion);
                 DcxFile compressedRegulationFile = DcxFile.Read(encryptedFile.Data);
-                UnpackBndFile(new MemoryStream(compressedRegulationFile.Decompress()), options.OutputPath);
+                UnpackBndFile(new MemoryStream(compressedRegulationFile.Decompress()), options.OutputPath, options);
             }
         }
 
@@ -652,14 +736,74 @@ namespace BinderTool
         {
             using (FileStream inputStream = new FileStream(options.InputPath, FileMode.Open, FileAccess.Read))
             {
-                ParamFile paramFile = ParamFile.ReadParamFile(inputStream);
-                foreach (var entry in paramFile.Entries)
-                {
+                UnpackParamFile(inputStream, options.InputPath, options.OutputPath);
+            }
+        }
+
+        private static void UnpackParamFile(Stream inputStream, string fileName, string outputPath)
+        {
+            ParamFile paramFile = ParamFile.ReadParamFile(inputStream);
+            ParamFormatDesc d = ParamFormatDesc.Read(fileName);
+            if (d == null) {
+                return;
+                var dir = Path.Combine(Directory.GetParent(outputPath).FullName, Path.GetFileNameWithoutExtension(outputPath));
+                Directory.CreateDirectory(dir);
+                foreach (var entry in paramFile.Entries) {
                     string entryName = $"{entry.Id:D10}.{paramFile.StructName}";
-                    string outputFilePath = Path.Combine(options.OutputPath, entryName);
-                    Directory.CreateDirectory(Path.GetDirectoryName(outputFilePath));
+                    string outputFilePath = Path.Combine(dir, entryName);
+                    Directory.CreateDirectory(Directory.GetParent(outputFilePath).FullName);
                     File.WriteAllBytes(outputFilePath, entry.Data);
                 }
+            } else {
+                var ans = new StringBuilder();
+                ans.Append("Name, ");
+                for (int i = 0; i < d.ParamInfo.Count; i++) {
+                    ans.Append(d.ParamInfo[i].Item1);
+                    if (i != d.ParamInfo.Count - 1) ans.Append(", ");
+                }
+                ans.AppendLine();
+                foreach (var entry in paramFile.Entries) {
+                    var reader = new BinaryReader(new MemoryStream(entry.Data));
+                    ans.Append($"{entry.Id:D10}, ");
+                    for (int i = 0; i < d.ParamInfo.Count; i++) {
+                        switch (d.ParamInfo[i].Item2) {
+                            case ParamType.Byte:
+                                ans.Append(reader.ReadSByte());
+                                break;
+                            case ParamType.UByte:
+                                ans.Append(reader.ReadByte());
+                                break;
+                            case ParamType.Short:
+                                ans.Append(reader.ReadInt16());
+                                break;
+                            case ParamType.UShort:
+                                ans.Append(reader.ReadUInt16());
+                                break;
+                            case ParamType.Int:
+                                ans.Append(reader.ReadInt32());
+                                break;
+                            case ParamType.UInt:
+                                ans.Append(reader.ReadUInt32());
+                                break;
+                            case ParamType.Long:
+                                ans.Append(reader.ReadInt64());
+                                break;
+                            case ParamType.ULong:
+                                ans.Append(reader.ReadUInt64());
+                                break;
+                            case ParamType.Float:
+                                ans.Append(reader.ReadSingle());
+                                break;
+                            case ParamType.Double:
+                                ans.Append(reader.ReadDouble());
+                                break;
+                        }
+                        if (i != d.ParamInfo.Count - 1) ans.Append(", ");
+                    }
+                    ans.AppendLine();
+                }
+                Directory.CreateDirectory(Directory.GetParent(outputPath).FullName);
+                File.WriteAllText(outputPath + ".csv", ans.ToString());
             }
         }
 
@@ -682,6 +826,25 @@ namespace BinderTool
                 string outputPath = options.OutputPath + ".txt";
                 File.WriteAllText(outputPath, builder.ToString());
             }
+        }
+
+        private static void UnpackEnflFile(Options options)
+        {
+            var ans = UnpackEnflFile(new FileStream(options.InputPath, FileMode.Open));
+            File.WriteAllText(options.OutputPath + ".csv", ans);
+        }
+
+        private static string UnpackEnflFile(Stream input)
+        {
+            var f = EntryFileListFile.ReadEntryFileListFile(input);
+            var ans = new StringBuilder();
+            foreach (var i in f.array1) {
+                ans.AppendLine($"{i.Unknown1}, {i.Unknown2}");
+            }
+            foreach (var i in f.array2) {
+                ans.AppendLine($"{i.Unknown1}, {i.Unknown2}, {i.EntryFileName}");
+            }
+            return ans.ToString();
         }
     }
 }

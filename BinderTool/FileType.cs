@@ -2,7 +2,9 @@
 {
     internal enum FileType
     {
+        Detect,
         Unknown,
+        Folder,
         Regulation,
         Dcx,
         EncryptedBdt,
@@ -13,6 +15,7 @@
         Savegame,
         Tpf,
         Param,
-        Fmg
+        Fmg,
+        Enfl
     }
 }
