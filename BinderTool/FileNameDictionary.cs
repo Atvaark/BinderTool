@@ -10,9 +10,13 @@ namespace BinderTool
     public class FileNameDictionary
     {
         private static readonly string[] VirtualRoots = {
-            //@"N:\SPRJ\data\",
-            //@"N:\FDP\data\",
-            //@"N:\NTC\",
+            @"N:\GR\data\INTERROOT_win64\",
+            @"N:\FDP\data\INTERROOT_win64\",
+            @"N:\FDP\data\INTERROOT_win64_havok2018_1\",
+            @"N:\GR\data\",
+            @"N:\SPRJ\data\",
+            @"N:\FDP\data\",
+            @"N:\NTC\",
             @"N:\"
         };
 
@@ -35,6 +39,17 @@ namespace BinderTool
             "chrflver",
             "tpfbnd",
             "hkxbnd",
+        };
+
+        private static readonly string[] PhysicalRootsEr = {
+            "data0",
+            "data1",
+            "data2",
+            "data3",
+            "debugdata",
+            "dvdroot",
+            "hkxbnd",
+            "tpfbnd"
         };
 
         private static readonly Dictionary<string, string> SubstitutionMapDs2 = new Dictionary<string, string>
@@ -137,10 +152,67 @@ namespace BinderTool
 
                 { "adhoc", "debugdata:/adhoc" }
             };
-        
+
+        private static readonly Dictionary<string, string> SubstitutionMapEr = new Dictionary<string, string> {
+            { "testdata", "debugdata:/testdata" },
+            { "other", "data0:/other" },
+            { "mapinfotex", "data0:/other/mapinfotex" },
+            { "material", "data0:/material" },
+            { "shader", "data0:/shader" },
+            { "shadertestdata", "debugdata:/testdata/Shaderbdle" },
+            { "debugfont", "dvdroot:/font" },
+            { "font", "data0:/font" },
+            { "chrbnd", "data3:/chr" },
+            { "chranibnd", "data3:/chr" },
+            { "chrbehbnd", "data3:/chr" },
+            { "chrtexbnd", "data3:/chr" },
+            { "chrtpf", "data3:/chr" },
+            { "action", "data0:/action" },
+            { "actscript", "data0:/action/script" },
+            { "obj", "data0:/obj" },
+            { "objbnd", "data0:/obj" },
+            { "map", "data2:/map" },
+            { "debugmap", "debugdata:/map" },
+            { "maphkx", "data2:/map" },
+            { "maptpf", "data2:/map" },
+            { "mapstudio", "data2:/map/mapstudio" },
+            { "breakobj", "data2:/map/breakobj" },
+            { "breakgeom", "data2:/map/breakgeom" },
+            { "entryfilelist", "data2:/map/entryfilelist" },
+            { "onav", "data2:/map/onav" },
+            { "script", "data0:/script" },
+            { "talkscript", "data0:/script/talk" },
+            { "aiscript", "data0:/script/talk" },
+            { "msg", "data0:/msg" },
+            { "param", "data0:/param" },
+            { "paramdef", "debugdata:/paramdef" },
+            { "gparam", "data0:/param/drawparam" },
+            { "event", "data0:/event" },
+            { "menu", "data0:/menu" },
+            { "menutexture", "data0:/menu" },
+            { "parts", "data0:/parts" },
+            { "facegen", "data0:/facegen" },
+            { "cutscene", "data0:/cutscene" },
+            { "movie", "data0:/movie" },
+            { "wwise_mobnkinfo", "data0:/sound" },
+            { "wwise_moaeibnd", "data0:/sound" },
+            { "wwise_testdata", "debugdata:/testdata/sound" },
+            { "sfx", "data0:/sfx" },
+            { "sfxbnd", "data0:/sfx" },
+            { "title", "data0:/adhoc" },
+            { "", "data0:/adhoc" },
+            { "dbgai", "data0:/script_interroot" },
+            { "dbgactscript", "data0:/script_interroot/action" },
+            { "menuesd_dlc", "data0:/script_interroot/action" },
+            { "luascriptpatch", "data0:/script_interroot/action" },
+            { "asset", "data1:/asset" },
+            { "expression", "data0:/expression" }
+        };
+
         private readonly Dictionary<string, Dictionary<ulong, List<string>>> _dictionary;
         private readonly Dictionary<string, string> _substitutionMap;
         private readonly string[] _physicalRoots;
+        private readonly GameVersion _gameVersion;
 
         public FileNameDictionary(GameVersion version)
         {
@@ -148,6 +220,7 @@ namespace BinderTool
 
             string[] physicalRoots;
             Dictionary<string, string> substitutionMap;
+            this._gameVersion = version;
             switch (version)
             {
                 case GameVersion.DarkSouls2:
@@ -157,6 +230,10 @@ namespace BinderTool
                 case GameVersion.DarkSouls3:
                     substitutionMap = SubstitutionMapDs3;
                     physicalRoots = PhysicalRootsDs3;
+                    break;
+                case GameVersion.EldenRing:
+                    substitutionMap = SubstitutionMapEr;
+                    physicalRoots = PhysicalRootsEr;
                     break;
                 default:
                     substitutionMap = new Dictionary<string, string>();
@@ -236,7 +313,9 @@ namespace BinderTool
             string fileName;
             if (!TrySplitFileName(file, out archiveName, out fileName))
             {
-                return;
+                //elden ring has empty roots for a few files
+                if (!_substitutionMap.ContainsKey("")) return;
+                archiveName = "";
             }
 
             string substitutionArchiveName;
@@ -257,7 +336,9 @@ namespace BinderTool
             }
 
             string hashablePath = "/" + fileName;
-            uint hash = GetHashCode(hashablePath);
+            ulong hash;
+            if (_gameVersion == GameVersion.EldenRing) hash = GetHashCodeLong(hashablePath);
+            else hash = GetHashCode(hashablePath);
 
             Dictionary<ulong, List<string>> archiveDictionary;
             if (_dictionary.TryGetValue(archiveName, out archiveDictionary) == false)
@@ -311,6 +392,7 @@ namespace BinderTool
             foreach (string line in lines)
             {
                 dictionary.Add(line);
+                //if (!line.EndsWith(".dcx")) dictionary.Add(line+".dcx");
             }
 
             return dictionary;
@@ -323,6 +405,14 @@ namespace BinderTool
             return filePath.Replace('\\', '/')
                 .ToLowerInvariant()
                 .Aggregate(0u, (i, c) => i * prime + c);
+        }
+        public static ulong GetHashCodeLong(string filePath, ulong prime = 133u)
+        {
+            if (string.IsNullOrEmpty(filePath))
+                return 0u;
+            return filePath.Replace('\\', '/')
+                .ToLowerInvariant()
+                .Aggregate(0ul, (i, c) => i * prime + c);
         }
 
         public static string NormalizeFileName(string fileName)

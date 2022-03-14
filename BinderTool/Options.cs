@@ -4,6 +4,7 @@ using System.Text.RegularExpressions;
 using BinderTool.Core;
 using CommandLine;
 
+//"C:\SteamLibrary\steamapps\common\ELDEN RING\Game\data0.bdt" "D:\EldenRing\data0" --extract-bnd true --only-process-extension .bnd
 namespace BinderTool
 {
     internal class Options
@@ -20,7 +21,7 @@ namespace BinderTool
         [Value(1, Required = false, Default = null, HelpText = "The output file or folder")]
         public string OutputPath { get; set; }
 
-        [Option("extract-bnd", Default = false, HelpText = "Automatically extract bnd files instead of outputting the .bnf")]
+        [Option("extract-bnd", Default = false, HelpText = "Automatically extract bnd files instead of outputting the .bnd")]
         public bool AutoExtractBnd { get; set; }
 
         [Option("extract-param", Default = false, HelpText = "Automatically extract param files instead of outputting the .param")]
@@ -29,8 +30,14 @@ namespace BinderTool
         [Option("extract-fmg", Default = false, HelpText = "Automatically extract fmg files instead of outputting the .fmg")]
         public bool AutoExtractFmg { get; set; }
 
-        [Option("extract-enfl", Default =false, HelpText = "Automatically extract enfl files instead of outputting the .enfl")]
+        [Option("extract-enfl", Default = false, HelpText = "Automatically extract enfl files instead of outputting the .entryfilelist")]
         public bool AutoExtractEnfl { get; set; }
+
+        [Option("collate-enfl-path", Default = "", HelpText = "Path of a .csv to collate .entryfilelist filename entries in instead of outputting the .enfl (overrides extract-enfl)")]
+        public string CollateEnflPath { get; set; }
+
+        [Option("only-process-extension", Default = "", HelpText = "Makes the program process files with this extension only when extracting .bdt files, ignoring all other files, e.g. \".bnd\"")]
+        public string OnlyProcessExtension { get; set; }
 
         [Option('r', "recurse", Default = false, HelpText = "When using folder input, recurse to child folders")]
         public bool Recurse { get; set; }
@@ -46,6 +53,7 @@ namespace BinderTool
                 AutoExtractParam = AutoExtractParam,
                 AutoExtractFmg = AutoExtractFmg,
                 AutoExtractEnfl = AutoExtractEnfl,
+                CollateEnflPath = CollateEnflPath,
                 Recurse = Recurse
             };
         }

@@ -72,6 +72,7 @@
   <ItemGroup>
     <Compile Include="DecryptionKeys.cs" />
     <Compile Include="FileNameDictionary.cs" />
+    <Compile Include="FileSearch.cs" />
     <Compile Include="FileType.cs" />
     <Compile Include="Options.cs" />
     <Compile Include="Program.cs" />
@@ -80,6 +81,9 @@
   <ItemGroup>
     <None Include="App.config" />
     <None Include="DictionaryDS2.csv">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="ERMaps.csv">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
     <None Include="EquipParamWeapon.csv">

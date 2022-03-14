@@ -1,4 +1,5 @@
-﻿using System.IO;
+﻿using System.Diagnostics;
+using System.IO;
 using System.Text;
 using Ionic.Zlib;
 
@@ -8,9 +9,9 @@ namespace BinderTool.Core.Enfl
     {
         public class EntryFileListEntry1
         {
-            public short Unknown1 { get; set; }
+            public int Unknown1 { get; set; }
 
-            public short Unknown2 { get; set; }
+            public int Unknown2 { get; set; }
 
             public static EntryFileListEntry1 ReadEntryFileListEntry1(BinaryReader reader)
             {
@@ -59,10 +60,13 @@ namespace BinderTool.Core.Enfl
             int count2 = reader.ReadInt32();
             int unknown2 = reader.ReadInt32(); // 0
 
-            array1 = new EntryFileListEntry1[count1];
+            array1 = new EntryFileListEntry1[count1+1];
+            array1[0] = new EntryFileListEntry1();
+            array1[0].Unknown1 = unknown1;
+            array1[0].Unknown2 = unknown2;
             for (int i = 0; i < count1; i++)
             {
-                array1[i] = EntryFileListEntry1.ReadEntryFileListEntry1(reader);
+                array1[i+1] = EntryFileListEntry1.ReadEntryFileListEntry1(reader);
             }
 
             reader.Align(16);

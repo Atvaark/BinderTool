@@ -83,7 +83,6 @@ namespace BinderTool.Core.Bnd4
                     reader.Seek(fileNameOffset);
                     fileName = reader.ReadNullTerminatedString();
                 }
-                if (fileName.Contains("param")) Console.WriteLine($"{fileName} {fileEntrySize} {fileEntryOffset}");
 
                 if (fileName.Length > 0 && fileEntrySize > 0 && fileEntryOffset > 0)
                 {

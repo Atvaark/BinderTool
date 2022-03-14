@@ -66,6 +66,10 @@ namespace BinderTool
                 }
             }
 
+            if (options.CollateEnflPath.Length > 0 && !File.Exists(options.CollateEnflPath)) {
+                File.Create(options.CollateEnflPath).Close();
+            }
+
             if (options.InputType == FileType.Folder) {
                 Directory.CreateDirectory(options.OutputPath);
                 var stack = new List<string>();
@@ -188,6 +192,13 @@ namespace BinderTool
             FileNameDictionary dictionary = FileNameDictionary.OpenFromFile(options.InputGameVersion);
             string fileNameWithoutExtension = Path.GetFileName(options.InputPath).Replace("Ebl.bdt", "").Replace(".bdt", "");
             string archiveName = fileNameWithoutExtension.ToLower();
+            HashSet<string> enflCollateSet = null;
+            if (options.CollateEnflPath.Length != 0) {
+                enflCollateSet = new HashSet<string>();
+                foreach (var line in File.ReadAllLines(options.CollateEnflPath)) {
+                    enflCollateSet.Add(line);
+                }
+            }
 
             using (Bdt5FileStream bdtStream = Bdt5FileStream.OpenFile(options.InputPath, FileMode.Open, FileAccess.Read))
             {
@@ -270,20 +281,23 @@ namespace BinderTool
 
                         if (extension == ".dcx")
                         {
-                            DcxFile dcxFile = DcxFile.Read(data);
-                            data = new MemoryStream(dcxFile.Decompress());
+                            try {
+                                DcxFile dcxFile = DcxFile.Read(data);
+                                data = new MemoryStream(dcxFile.Decompress());
 
-                            fileName = Path.Combine(Path.GetDirectoryName(fileName), Path.GetFileNameWithoutExtension(fileName));
+                                fileName = Path.Combine(Path.GetDirectoryName(fileName), Path.GetFileNameWithoutExtension(fileName));
 
-                            if (fileNameFound)
-                            {
-                                extension = Path.GetExtension(fileName);
-                            }
-                            else
-                            {
-                                extension = GetDataExtension(data);
-                                fileName += extension;
-                            }
+                                if (fileNameFound) {
+                                    extension = Path.GetExtension(fileName);
+                                } else {
+                                    extension = GetDataExtension(data);
+                                    fileName += extension;
+                                }
+                            } catch { }
+                        }
+
+                        if (options.OnlyProcessExtension.Length > 0 && extension.ToLower() != options.OnlyProcessExtension.ToLower()) {
+                            continue;
                         }
 
                         Debug.WriteLine(
@@ -298,7 +312,7 @@ namespace BinderTool
                             entry.IsEncrypted,
                             fileNameFound);
 
-                        if (options.AutoExtractBnd && extension == ".bnd")
+                        if (options.AutoExtractBnd && extension.EndsWith("bnd"))
                         {
                             UnpackBndFile(data, options.OutputPath, options);
                             continue;
@@ -311,7 +325,11 @@ namespace BinderTool
                             UnpackFmgFile(data, Path.Combine(options.OutputPath, fileName));
                             continue;
                         }
-                        if (options.AutoExtractEnfl && extension == ".enfl") {
+                        if (options.CollateEnflPath != null && options.CollateEnflPath.Length > 0 && extension == ".entryfilelist") {
+                            EntryFileListFile file = EntryFileListFile.ReadEntryFileListFile(data);
+                            File.AppendAllLines(options.CollateEnflPath, file.array2.Select(e => e.EntryFileName).Where(enflCollateSet.Add));
+                            continue;
+                        } else if (options.AutoExtractEnfl && extension == ".entryfilelist") {
                             var ans = UnpackEnflFile(data);
                             File.WriteAllText(Path.Combine(options.OutputPath, fileName+".csv"), ans);
                             continue;
@@ -423,7 +441,7 @@ namespace BinderTool
                     extension = ".bhd";
                     return true;
                 case "BDF4":
-                    extension = ".bdf";
+                    extension = ".bdt";
                     return true;
                 case "DCX\0":
                     extension = ".dcx";
@@ -500,10 +518,13 @@ namespace BinderTool
                     extension = ".emevd";
                     return true;
                 case "ENFL":
-                    extension = ".enfl";
+                    extension = ".entryfilelist";
                     return true;
                 case "NVMA":
-                    extension = ".nvma"; // ?
+                    extension = ".nva";
+                    return true;
+                case "NVMC":
+                    extension = ".nvc";
                     return true;
                 case "MSB ":
                     extension = ".msb"; // ?
@@ -513,6 +534,9 @@ namespace BinderTool
                     return true;
                 case "ONAV":
                     extension = ".onav"; // ?
+                    return true;
+                case "mpWF":
+                    extension = ".mpw";
                     return true;
                 default:
                     extension = ".bin";
