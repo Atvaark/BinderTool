@@ -293,7 +293,9 @@ namespace BinderTool
                                     extension = GetDataExtension(data);
                                     fileName += extension;
                                 }
-                            } catch { }
+                            } catch {
+                                Debug.WriteLine("Error upnacking dcx, outputting as .dcx instead");
+                            }
                         }
 
                         if (options.OnlyProcessExtension.Length > 0 && extension.ToLower() != options.OnlyProcessExtension.ToLower()) {
@@ -385,11 +387,11 @@ namespace BinderTool
             }
 
             // TODO: Sekiro
-            //if (TryGetUnicodeSignature(data, 4, out signature)
-            //    && TryGetFileExtension(signature, out extension))
-            //{
-            //    return extension;
-            //}
+            if (TryGetUnicodeSignature(data, 4, out signature)
+                && TryGetFileExtension(signature, out extension))
+            {
+                return extension;
+            }
 
             if (TryGetAsciiSignature(data, 26, out signature)
                 && TryGetFileExtension(signature.Substring(12, 14), out extension))
@@ -469,8 +471,8 @@ namespace BinderTool
                     extension = ".breakobj";
                     return true;
                 case "filt":
-                    extension = ".fltparam"; // DS II
-                    //extension = ".gparam"; // DS III
+                    //extension = ".fltparam"; // DS II
+                    extension = ".gparam"; // DS III
                     return true;
                 case "VSDF":
                     extension = ".vsd";
@@ -527,16 +529,19 @@ namespace BinderTool
                     extension = ".nvc";
                     return true;
                 case "MSB ":
-                    extension = ".msb"; // ?
+                    extension = ".msb";
                     return true;
                 case "BJBO":
                     extension = ".bjbo"; // ?
                     return true;
                 case "ONAV":
-                    extension = ".onav"; // ?
+                    extension = ".onav";
                     return true;
                 case "mpWF":
                     extension = ".mpw";
+                    return true;
+                case "BOEG":
+                    extension = ".breakgeom";
                     return true;
                 default:
                     extension = ".bin";

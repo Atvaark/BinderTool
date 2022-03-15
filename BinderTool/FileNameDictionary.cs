@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Reflection;
@@ -153,7 +154,7 @@ namespace BinderTool
                 { "adhoc", "debugdata:/adhoc" }
             };
 
-        private static readonly Dictionary<string, string> SubstitutionMapEr = new Dictionary<string, string> {
+        public static readonly Dictionary<string, string> SubstitutionMapEr = new Dictionary<string, string> {
             { "testdata", "debugdata:/testdata" },
             { "other", "data0:/other" },
             { "mapinfotex", "data0:/other/mapinfotex" },
@@ -182,7 +183,7 @@ namespace BinderTool
             { "onav", "data2:/map/onav" },
             { "script", "data0:/script" },
             { "talkscript", "data0:/script/talk" },
-            { "aiscript", "data0:/script/talk" },
+            { "aiscript", "data0:/script" },
             { "msg", "data0:/msg" },
             { "param", "data0:/param" },
             { "paramdef", "debugdata:/paramdef" },
@@ -193,6 +194,7 @@ namespace BinderTool
             { "parts", "data0:/parts" },
             { "facegen", "data0:/facegen" },
             { "cutscene", "data0:/cutscene" },
+            { "cutscenebnd", "data0:/cutscene" },
             { "movie", "data0:/movie" },
             { "wwise_mobnkinfo", "data0:/sound" },
             { "wwise_moaeibnd", "data0:/sound" },
@@ -314,7 +316,10 @@ namespace BinderTool
             if (!TrySplitFileName(file, out archiveName, out fileName))
             {
                 //elden ring has empty roots for a few files
-                if (!_substitutionMap.ContainsKey("")) return;
+                if (!_substitutionMap.ContainsKey("")) {
+                    Debug.WriteLine($"Missing {archiveName}");
+                    return;
+                }
                 archiveName = "";
             }
 
@@ -323,6 +328,7 @@ namespace BinderTool
             {
                 if (!_physicalRoots.Contains(archiveName))
                 {
+                    Debug.WriteLine($"Missing {archiveName}");
                     return;
                 }
 
@@ -427,6 +433,20 @@ namespace BinderTool
             }
 
             return fileName.Replace('/', '\\').TrimStart('\\');
+        }
+        public static string MakeHashable(string fileName)
+        {
+            try {
+                var sp = fileName.Split(':');
+                if (sp.Length == 1) sp = new string[] { "", sp[0] };
+                string s;
+                SubstitutionMapEr.TryGetValue(sp[0], out s);
+                if (s == null) return fileName;
+                fileName = s + sp[1];
+                sp = fileName.Split(':');
+                fileName = sp[1];
+                return fileName;
+            } catch { return fileName; }
         }
     }
 }
