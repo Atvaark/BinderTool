@@ -840,7 +840,7 @@ namespace BinderTool
                 "sfxbnd:"
             );
         }
-        public static (string, GetEnumerator[], string, string) data1AetTpf()
+        public static (string, GetEnumerator[], string, string) data1AetTpfSearch()
         {
             return (
                 "/asset/aet/aet{1}/aet{1}_{2}{0}.tpf.dcx",
@@ -853,7 +853,7 @@ namespace BinderTool
                 "asset:"
             );
         }
-        public static (string, GetEnumerator[], string, string) data1AegGeombnd()
+        public static (string, GetEnumerator[], string, string) data1AegGeombndSearch()
         {
             return (
                 "/asset/aeg/aeg{0}/aeg{0}_{1}.geombnd.dcx",
@@ -865,7 +865,7 @@ namespace BinderTool
                 "asset:"
             );
         }
-        public static (string, GetEnumerator[], string, string) data1AegGeomhkxbnd()
+        public static (string, GetEnumerator[], string, string) data1AegGeomhkxbndSearch()
         {
             return (
                 "/asset/aeg/aeg{1}/aeg{1}_{2}_{0}.geomhkxbnd.dcx",
@@ -876,6 +876,74 @@ namespace BinderTool
                 },
                 "/asset",
                 "asset:"
+            );
+        }
+        public static (string, GetEnumerator[], string, string) data3ChrChrbndSearch()
+        {
+            return (
+                "/chr/c{0}.chrbnd.dcx",
+                new GetEnumerator[] {
+                    Range0Padded(0, 10000, 4),
+                },
+                "/chr",
+                "chr:"
+            );
+        }
+        public static (string, GetEnumerator[], string, string) data3ChrAnibndSearch()
+        {
+            return (
+                "/chr/c{0}.anibnd.dcx",
+                new GetEnumerator[] {
+                    Range0Padded(0, 10000, 4),
+                },
+                "/chr",
+                "chranibnd:"
+            );
+        }
+        public static (string, GetEnumerator[], string, string) data3ChrAnibndSearch2()
+        {
+            return (
+                "/chr/c0000_a{0}.anibnd.dcx",
+                new GetEnumerator[] {
+                    () => new string[] {"00_lo", "00_md", "00_hi", "0x", "1x", "2x", "3x", "4x", "5x", "6x", "7x", "8x", "9x"},
+                },
+                "/chr",
+                "chranibnd:"
+            );
+        }
+        public static (string, GetEnumerator[], string, string) data3ChrAnibndSearch3()
+        {
+            return (
+                "/chr/c{1}_div{0}.anibnd.dcx",
+                new GetEnumerator[] {
+                    Range0Padded(0, 100, 2),
+                    Range0Padded(0, 10000, 4),
+                },
+                "/chr",
+                "chranibnd:"
+            );
+        }
+        public static (string, GetEnumerator[], string, string) data3ChrBehbndSearch()
+        {
+            return (
+                "/chr/c{0}.behbnd.dcx",
+                new GetEnumerator[] {
+                    Range0Padded(0, 10000, 4),
+                },
+                "/chr",
+                "chrbehbnd:"
+            );
+        }
+        public static (string, GetEnumerator[], string, string) data3ChrTexbndSearch()
+        {
+            return (
+                "/chr/c{1}_{0}.texbnd.dcx",
+                new GetEnumerator[] {
+                    () => new string[] {"h", "l"},
+                    Range0Padded(0, 10000, 4),
+                },
+                "/chr",
+                "chrtexbnd:"
             );
         }
         public static (string, GetEnumerator[], string, string) data0MenuSearch5()
