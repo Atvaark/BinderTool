@@ -840,6 +840,44 @@ namespace BinderTool
                 "sfxbnd:"
             );
         }
+        public static (string, GetEnumerator[], string, string) data1AetTpf()
+        {
+            return (
+                "/asset/aet/aet{1}/aet{1}_{2}{0}.tpf.dcx",
+                new GetEnumerator[] {
+                    () => new string[] {"", "_l", "_billboards", "_billboards_l"},
+                    Range0Padded(0, 1000, 3),
+                    Range0Padded(0, 1000, 3)
+                },
+                "/asset",
+                "asset:"
+            );
+        }
+        public static (string, GetEnumerator[], string, string) data1AegGeombnd()
+        {
+            return (
+                "/asset/aeg/aeg{0}/aeg{0}_{1}.geombnd.dcx",
+                new GetEnumerator[] {
+                    Range0Padded(0, 1000, 3),
+                    Range0Padded(0, 1000, 3)
+                },
+                "/asset",
+                "asset:"
+            );
+        }
+        public static (string, GetEnumerator[], string, string) data1AegGeomhkxbnd()
+        {
+            return (
+                "/asset/aeg/aeg{1}/aeg{1}_{2}_{0}.geomhkxbnd.dcx",
+                new GetEnumerator[] {
+                    () => new string[] { "h", "l" },
+                    Range0Padded(0, 1000, 3),
+                    Range0Padded(0, 1000, 3)
+                },
+                "/asset",
+                "asset:"
+            );
+        }
         public static (string, GetEnumerator[], string, string) data0MenuSearch5()
         {
             return (
