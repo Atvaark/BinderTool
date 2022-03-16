@@ -21,6 +21,9 @@ namespace BinderTool
         [Value(1, Required = false, Default = null, HelpText = "The output file or folder")]
         public string OutputPath { get; set; }
 
+        [Option("extract-dcx", Default = true, HelpText = "Automatically extract dcx files instead of outputting the .dcx")]
+        public bool AutoExtractDcx { get; set; }
+
         [Option("extract-bnd", Default = false, HelpText = "Automatically extract bnd files instead of outputting the .bnd")]
         public bool AutoExtractBnd { get; set; }
 
@@ -49,6 +52,7 @@ namespace BinderTool
                 InputType = InputType,
                 InputPath = InputPath,
                 OutputPath = OutputPath,
+                AutoExtractDcx = AutoExtractDcx,
                 AutoExtractBnd = AutoExtractBnd,
                 AutoExtractParam = AutoExtractParam,
                 AutoExtractFmg = AutoExtractFmg,
@@ -141,6 +145,10 @@ namespace BinderTool
                 return (FileType.EncryptedBdt, GameVersion.Detect);
             }
 
+            if (fileName == "sd.bdt") {
+                return (FileType.EncryptedBdt, GameVersion.EldenRing);
+            }
+
             if (Regex.IsMatch(fileName, @"^[^\W_]+Ebl\.bdt$", RegexOptions.IgnoreCase))
             {
                 return (FileType.EncryptedBdt, GameVersion.DarkSouls2);
@@ -156,6 +164,10 @@ namespace BinderTool
                 if (hasER) return (FileType.EncryptedBhd, GameVersion.EldenRing);
                 if (hasDS3) return (FileType.EncryptedBhd, GameVersion.DarkSouls3);
                 return (FileType.EncryptedBhd, GameVersion.Detect);
+            }
+
+            if (fileName == "sd.bhd") {
+                return (FileType.EncryptedBhd, GameVersion.EldenRing);
             }
 
             if (Regex.IsMatch(fileName, @"^[^\W_]+Ebl\.bhd$", RegexOptions.IgnoreCase))

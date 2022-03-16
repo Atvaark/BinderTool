@@ -50,7 +50,8 @@ namespace BinderTool
             "debugdata",
             "dvdroot",
             "hkxbnd",
-            "tpfbnd"
+            "tpfbnd",
+            "sd"
         };
 
         private static readonly Dictionary<string, string> SubstitutionMapDs2 = new Dictionary<string, string>
@@ -199,6 +200,7 @@ namespace BinderTool
             { "wwise_mobnkinfo", "data0:/sound" },
             { "wwise_moaeibnd", "data0:/sound" },
             { "wwise_testdata", "debugdata:/testdata/sound" },
+            { "wwise", "sd:" },
             { "sfx", "data0:/sfx" },
             { "sfxbnd", "data0:/sfx" },
             { "title", "data0:/adhoc" },

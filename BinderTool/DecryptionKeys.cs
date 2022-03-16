@@ -47,6 +47,7 @@ namespace BinderTool
                 { "Data1.bhd", ErData1Key },
                 { "Data2.bhd", ErData2Key },
                 { "Data3.bhd", ErData3Key },
+                { "sd.bhd", ErSdKey },
             };
 
             Ds3AesKeyDictionary = new Dictionary<string, byte[]>(StringComparer.InvariantCultureIgnoreCase)
@@ -332,6 +333,16 @@ eDbqepyJWHpP6I565ySqlol1p/BScVjbEsVyvZGtWIXLPDbx4EYFKA5B52uK6Gdz
 4qcyVFtVEhNoMvg+EoWnyLD7EUzuB2Khl46CuNictyWrLlIHgpKJr1QD8a0ld0PD
 PHDZn03q6QDvZd23UW2d9J+/HeBt52j08+qoBXPwhndZsmPMWngQDaik6FM7EVRQ
 etKPi6h5uprVmMAS5wR/jQIVTMpTj/zJdwIEXszeQw==
+-----END RSA PUBLIC KEY-----";
+
+        private const string ErSdKey =
+@"-----BEGIN RSA PUBLIC KEY-----
+MIIBCwKCAQEAmYJ/5GJU4boJSvZ81BFOHYTGdBWPHnWYly3yWo01BYjGRnz8NTkz
+DHUxsbjIgtG5XqsQfZstZILQ97hgSI5AaAoCGrT8sn0PeXg2i0mKwL21gRjRUdvP
+Dp1Y+7hgrGwuTkjycqqsQ/qILm4NvJHvGRd7xLOJ9rs2zwYhceRVrq9XU2AXbdY4
+pdCQ3+HuoaFiJ0dW0ly5qdEXjbSv2QEYe36nWCtsd6hEY9LjbBX8D1fK3D2c6C0g
+NdHJGH2iEONUN6DMK9t0v2JBnwCOZQ7W+Gt7SpNNrkx8xKEM8gH9na10g9ne11Mi
+O1FnLm8i4zOxVdPHQBKICkKcGS1o3C2dfwIEXw/f3w==
 -----END RSA PUBLIC KEY-----";
     }
 }

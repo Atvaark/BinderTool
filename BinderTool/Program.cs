@@ -76,7 +76,7 @@ namespace BinderTool
                 stack.AddRange(Directory.EnumerateFiles(options.InputPath));
                 if (options.Recurse) stack.AddRange(Directory.EnumerateDirectories(options.InputPath));
                 while (stack.Count > 0) {
-                    var curr = stack[stack.Count - 1]; 
+                    var curr = stack[stack.Count - 1];
                     stack.RemoveAt(stack.Count - 1);
                     if (Directory.Exists(curr)) {
                         stack.AddRange(Directory.EnumerateFiles(curr));
@@ -113,7 +113,9 @@ namespace BinderTool
             } else {
                 Process(options);
             }
-
+#if (DEBUG)
+            Console.ReadKey();
+#endif
         }
 
         static void Process(Options options) {
@@ -189,8 +191,11 @@ namespace BinderTool
 
         private static void UnpackBdtFile(Options options)
         {
+
+            Console.WriteLine($"Unpacking encrypted bdt file \"{options.InputPath}\" to \"{options.OutputPath}\"...");
             FileNameDictionary dictionary = FileNameDictionary.OpenFromFile(options.InputGameVersion);
-            string fileNameWithoutExtension = Path.GetFileName(options.InputPath).Replace("Ebl.bdt", "").Replace(".bdt", "");
+            string bdtName = Path.GetFileName(options.InputPath);
+            string fileNameWithoutExtension = bdtName.Replace("Ebl.bdt", "").Replace(".bdt", "");
             string archiveName = fileNameWithoutExtension.ToLower();
             HashSet<string> enflCollateSet = null;
             if (options.CollateEnflPath.Length != 0) {
@@ -208,147 +213,169 @@ namespace BinderTool
                         version: options.InputGameVersion),
                     version: options.InputGameVersion
                     );
-                foreach (var bucket in bhdFile.GetBuckets())
+                var entries = bhdFile.GetBuckets().SelectMany(b => b.GetEntries());
+                var numEntries = entries.Count();
+                Console.WriteLine($"\"{bdtName}\" has {numEntries} files.");
+                var currEntryPos = (Console.CursorLeft, Console.CursorTop);
+                var entryNum = 0;
+                ulong bytesWritten = 0;
+                var extracted = 0;
+                var missingNames = 0;
+                foreach (var entry in entries) 
                 {
-                    foreach (var entry in bucket.GetEntries())
+                    var tmpPos = (Console.CursorLeft, Console.CursorTop);
+                    Console.SetCursorPosition(currEntryPos.CursorLeft, currEntryPos.CursorTop);
+                    Console.WriteLine($"Processing entry {entryNum}/{numEntries} ({(int)Math.Round(((float)entryNum / (float)numEntries) * 100)}%)");
+                    Console.SetCursorPosition(tmpPos.CursorLeft, tmpPos.CursorTop);
+                    entryNum++;
+                    Stream data;
+                    if (entry.FileSize == 0)
                     {
-                        Stream data;
-                        if (entry.FileSize == 0)
+                        long fileSize;
+                        if (!TryReadFileSize(entry, bdtStream, out fileSize))
                         {
-                            long fileSize;
-                            if (!TryReadFileSize(entry, bdtStream, out fileSize))
-                            {
-                                Console.WriteLine($"Unable to determine the length of file '{entry.FileNameHash:D10}'");
-                                continue;
-                            }
-
-                            entry.FileSize = fileSize;
-                        }
-
-                        if (entry.IsEncrypted)
-                        {
-                            data = bdtStream.Read(entry.FileOffset, entry.PaddedFileSize);
-                            CryptographyUtility.DecryptAesEcb(data, entry.AesKey.Key, entry.AesKey.Ranges);
-                            data.Position = 0;
-                            data.SetLength(entry.FileSize);
-                        }
-                        else
-                        {
-                            data = bdtStream.Read(entry.FileOffset, entry.FileSize);
-                        }
-
-                        string fileName;
-                        string dataExtension = GetDataExtension(data);
-                        bool fileNameFound = dictionary.TryGetFileName(entry.FileNameHash, archiveName, out fileName);
-                        if (!fileNameFound)
-                        {
-                            fileNameFound = dictionary.TryGetFileName(entry.FileNameHash, archiveName, dataExtension, out fileName);
-                        }
-
-                        string extension;
-                        if (fileNameFound)
-                        {
-                            extension = Path.GetExtension(fileName);
-
-                            if (dataExtension == ".dcx" && extension != ".dcx")
-                            {
-                                extension = ".dcx";
-                                fileName += ".dcx";
-                            }
-                        }
-                        else
-                        {
-                            extension = dataExtension;
-                            fileName = $"{entry.FileNameHash:D10}_{fileNameWithoutExtension}{extension}";
-                        }
-
-                        if (extension == ".enc")
-                        {
-                            byte[] decryptionKey;
-                            if (DecryptionKeys.TryGetAesFileKey(options.InputGameVersion, Path.GetFileName(fileName), out decryptionKey))
-                            {
-                                EncFile encFile = EncFile.ReadEncFile(data, decryptionKey);
-                                data = encFile.Data;
-
-                                fileName = Path.Combine(Path.GetDirectoryName(fileName), Path.GetFileNameWithoutExtension(fileName));
-                                extension = Path.GetExtension(fileName);
-                            }
-                            else
-                            {
-                                Debug.WriteLine($"No decryption key for file \'{fileName}\' found.");
-                            }
-                        }
-
-                        if (extension == ".dcx")
-                        {
-                            try {
-                                DcxFile dcxFile = DcxFile.Read(data);
-                                data = new MemoryStream(dcxFile.Decompress());
-
-                                fileName = Path.Combine(Path.GetDirectoryName(fileName), Path.GetFileNameWithoutExtension(fileName));
-
-                                if (fileNameFound) {
-                                    extension = Path.GetExtension(fileName);
-                                } else {
-                                    extension = GetDataExtension(data);
-                                    fileName += extension;
-                                }
-                            } catch {
-                                Debug.WriteLine("Error upnacking dcx, outputting as .dcx instead");
-                            }
-                        }
-
-                        if (options.OnlyProcessExtension.Length > 0 && extension.ToLower() != options.OnlyProcessExtension.ToLower()) {
+                            Console.WriteLine($"Unable to determine the length of file '{entry.FileNameHash:D10}'");
                             continue;
                         }
 
-                        Debug.WriteLine(
-                            "{0}\t{1}\t{2}\t{3}\t{4}\t{5}\t{6}\t{7}\t{8}",
-                            fileNameWithoutExtension,
-                            fileName,
-                            extension,
-                            entry.FileNameHash,
-                            entry.FileOffset,
-                            entry.FileSize,
-                            entry.PaddedFileSize,
-                            entry.IsEncrypted,
-                            fileNameFound);
-
-                        if (options.AutoExtractBnd && extension.EndsWith("bnd"))
-                        {
-                            UnpackBndFile(data, options.OutputPath, options);
-                            continue;
-                        }
-                        if (options.AutoExtractParam && extension == ".param") {
-                            UnpackParamFile(data, fileNameWithoutExtension, Path.Combine(options.OutputPath, fileNameWithoutExtension));
-                            continue;
-                        }
-                        if (options.AutoExtractFmg && extension == ".fmg") {
-                            UnpackFmgFile(data, Path.Combine(options.OutputPath, fileName));
-                            continue;
-                        }
-                        if (options.CollateEnflPath != null && options.CollateEnflPath.Length > 0 && extension == ".entryfilelist") {
-                            EntryFileListFile file = EntryFileListFile.ReadEntryFileListFile(data);
-                            File.AppendAllLines(options.CollateEnflPath, file.array2.Select(e => e.EntryFileName).Where(enflCollateSet.Add));
-                            continue;
-                        } else if (options.AutoExtractEnfl && extension == ".entryfilelist") {
-                            var ans = UnpackEnflFile(data);
-                            File.WriteAllText(Path.Combine(options.OutputPath, fileName+".csv"), ans);
-                            continue;
-                        }
-                        string newFileNamePath = Path.Combine(options.OutputPath, fileName);
-                        Directory.CreateDirectory(Path.GetDirectoryName(newFileNamePath));
-                        FileStream outS = new FileStream(newFileNamePath, FileMode.OpenOrCreate);
-                        byte[] buf = new byte[1000];
-                        data.Seek(0, SeekOrigin.Begin);
-                        for (long pos = 0; pos < data.Length; pos += buf.Length)
-                        {
-                            int read = data.Read(buf, 0, buf.Length);
-                            outS.Write(buf, 0, read);
-                        }
-                        outS.Close();
+                        entry.FileSize = fileSize;
                     }
+
+                    if (entry.IsEncrypted)
+                    {
+                        data = bdtStream.Read(entry.FileOffset, entry.PaddedFileSize);
+                        CryptographyUtility.DecryptAesEcb(data, entry.AesKey.Key, entry.AesKey.Ranges);
+                        data.Position = 0;
+                        data.SetLength(entry.FileSize);
+                    }
+                    else
+                    {
+                        data = bdtStream.Read(entry.FileOffset, entry.FileSize);
+                    }
+
+                    string fileName;
+                    string dataExtension = GetDataExtension(data);
+                    bool fileNameFound = dictionary.TryGetFileName(entry.FileNameHash, archiveName, out fileName);
+                    if (!fileNameFound)
+                    {
+                        fileNameFound = dictionary.TryGetFileName(entry.FileNameHash, archiveName, dataExtension, out fileName);
+                    }
+                    if (!fileNameFound) missingNames++;
+
+                    string extension;
+                    if (fileNameFound)
+                    {
+                        extension = Path.GetExtension(fileName);
+
+                        if (dataExtension == ".dcx" && extension != ".dcx")
+                        {
+                            extension = ".dcx";
+                            fileName += ".dcx";
+                        }
+                    }
+                    else
+                    {
+                        extension = dataExtension;
+                        fileName = $"{entry.FileNameHash:D10}_{fileNameWithoutExtension}{extension}";
+                    }
+
+                    if (extension == ".enc")
+                    {
+                        byte[] decryptionKey;
+                        if (DecryptionKeys.TryGetAesFileKey(options.InputGameVersion, Path.GetFileName(fileName), out decryptionKey))
+                        {
+                            EncFile encFile = EncFile.ReadEncFile(data, decryptionKey);
+                            data = encFile.Data;
+
+                            fileName = Path.Combine(Path.GetDirectoryName(fileName), Path.GetFileNameWithoutExtension(fileName));
+                            extension = Path.GetExtension(fileName);
+                        }
+                        else
+                        {
+                            Debug.WriteLine($"No decryption key for file \'{fileName}\' found.");
+                        }
+                    }
+
+                    if (options.AutoExtractDcx && extension == ".dcx")
+                    {
+                        try {
+                            DcxFile dcxFile = DcxFile.Read(data);
+                            data = new MemoryStream(dcxFile.Decompress());
+
+                            fileName = Path.Combine(Path.GetDirectoryName(fileName), Path.GetFileNameWithoutExtension(fileName));
+
+                            if (fileNameFound) {
+                                extension = Path.GetExtension(fileName);
+                            } else {
+                                extension = GetDataExtension(data);
+                                fileName += extension;
+                            }
+                        } catch {
+                            Debug.WriteLine("Error upnacking dcx, outputting as .dcx instead");
+                        }
+                    }
+
+                    if (options.OnlyProcessExtension.Length > 0 && extension.ToLower() != options.OnlyProcessExtension.ToLower()) {
+                        continue;
+                    }
+
+                    Debug.WriteLine(
+                        "{0}\t{1}\t{2}\t{3}\t{4}\t{5}\t{6}\t{7}\t{8}",
+                        fileNameWithoutExtension,
+                        fileName,
+                        extension,
+                        entry.FileNameHash,
+                        entry.FileOffset,
+                        entry.FileSize,
+                        entry.PaddedFileSize,
+                        entry.IsEncrypted,
+                        fileNameFound);
+
+                    if (options.AutoExtractBnd && extension.EndsWith("bnd"))
+                    {
+                        bytesWritten += UnpackBndFile(data, options.OutputPath, options);
+                        extracted++;
+                        continue;
+                    }
+                    if (options.AutoExtractParam && extension == ".param") {
+                        bytesWritten += UnpackParamFile(data, fileNameWithoutExtension, Path.Combine(options.OutputPath, fileNameWithoutExtension));
+                        extracted++;
+                        continue;
+                    }
+                    if (options.AutoExtractFmg && extension == ".fmg") {
+                        bytesWritten += UnpackFmgFile(data, Path.Combine(options.OutputPath, fileName));
+                        extracted++;
+                        continue;
+                    }
+                    if (options.CollateEnflPath != null && options.CollateEnflPath.Length > 0 && extension == ".entryfilelist") {
+                        EntryFileListFile file = EntryFileListFile.ReadEntryFileListFile(data);
+                        File.AppendAllLines(options.CollateEnflPath, file.array2.Select(e => e.EntryFileName).Where(enflCollateSet.Add));
+                        extracted++;
+                        continue;
+                    } else if (options.AutoExtractEnfl && extension == ".entryfilelist") {
+                        var ans = UnpackEnflFile(data);
+                        var path = Path.Combine(options.OutputPath, fileName + ".csv");
+                        File.WriteAllText(path, ans);
+                        bytesWritten += (ulong)new FileInfo(path).Length;
+                        extracted++;
+                        continue;
+                    }
+                    string newFileNamePath = Path.Combine(options.OutputPath, fileName);
+                    Directory.CreateDirectory(Path.GetDirectoryName(newFileNamePath));
+                    FileStream outS = new FileStream(newFileNamePath, FileMode.OpenOrCreate);
+                    byte[] buf = new byte[1000];
+                    data.Seek(0, SeekOrigin.Begin);
+                    for (long pos = 0; pos < data.Length; pos += buf.Length)
+                    {
+                        int read = data.Read(buf, 0, buf.Length);
+                        outS.Write(buf, 0, read);
+                    }
+                    outS.Close();
+                    bytesWritten += (ulong)data.Length;
+                    extracted++;
                 }
+                Console.WriteLine($"Succesfully extracted {extracted}/{numEntries} files ({numEntries - extracted} failed), totaling {bytesWritten} bytes written to disk");
+                Console.WriteLine($"{missingNames} file names were unknown");
             }
         }
 
@@ -386,7 +413,6 @@ namespace BinderTool
                 return extension;
             }
 
-            // TODO: Sekiro
             if (TryGetUnicodeSignature(data, 4, out signature)
                 && TryGetFileExtension(signature, out extension))
             {
@@ -543,6 +569,9 @@ namespace BinderTool
                 case "BOEG":
                     extension = ".breakgeom";
                     return true;
+                case "BKHD":
+                    extension = ".bnk";
+                    return true;
                 default:
                     extension = ".bin";
                     return false;
@@ -566,10 +595,10 @@ namespace BinderTool
             }
         }
 
-        private static void UnpackBndFile(Stream inputStream, string outputPath, Options options)
+        private static ulong UnpackBndFile(Stream inputStream, string outputPath, Options options)
         {
             Bnd4File file = Bnd4File.ReadBnd4File(inputStream);
-
+            ulong bytesWritten = 0;
             foreach (var entry in file.Entries)
             {
                 try
@@ -582,9 +611,10 @@ namespace BinderTool
                     }
                     Directory.CreateDirectory(Path.GetDirectoryName(outputFilePath));
                     File.WriteAllBytes(outputFilePath, entry.EntryData);
-                }
-                catch (Exception e) { }
+                    bytesWritten += (ulong)entry.EntryData.Length;
+                } catch (Exception e) { }
             }
+            return bytesWritten;
         }
 
         private static void UnpackSl2File(Options options)
@@ -740,7 +770,7 @@ namespace BinderTool
             Console.WriteLine($"The file : \'{options.InputPath}\' is already decrypted.");
         }
 
-        private static MemoryStream DecryptBhdFile(string filePath, GameVersion version)
+        public static MemoryStream DecryptBhdFile(string filePath, GameVersion version)
         {
             string fileDirectory = Path.GetDirectoryName(filePath) ?? string.Empty;
             string fileName = Path.GetFileName(filePath) ?? string.Empty;
@@ -770,27 +800,30 @@ namespace BinderTool
             return CryptographyUtility.DecryptRsa(filePath, key);
         }
 
-        private static void UnpackParamFile(Options options)
+        private static ulong UnpackParamFile(Options options)
         {
             using (FileStream inputStream = new FileStream(options.InputPath, FileMode.Open, FileAccess.Read))
             {
-                UnpackParamFile(inputStream, options.InputPath, options.OutputPath);
+                return UnpackParamFile(inputStream, options.InputPath, options.OutputPath);
             }
         }
 
-        private static void UnpackParamFile(Stream inputStream, string fileName, string outputPath)
+        private static ulong UnpackParamFile(Stream inputStream, string fileName, string outputPath)
         {
             ParamFile paramFile = ParamFile.ReadParamFile(inputStream);
             ParamFormatDesc d = ParamFormatDesc.Read(fileName);
             if (d == null) {
                 var dir = Path.Combine(Directory.GetParent(outputPath).FullName, Path.GetFileNameWithoutExtension(outputPath));
                 Directory.CreateDirectory(dir);
+                ulong bytesWritten = 0;
                 foreach (var entry in paramFile.Entries) {
                     string entryName = $"{entry.Id:D10}.{paramFile.StructName}";
                     string outputFilePath = Path.Combine(dir, entryName);
                     Directory.CreateDirectory(Directory.GetParent(outputFilePath).FullName);
                     File.WriteAllBytes(outputFilePath, entry.Data);
+                    bytesWritten += (ulong)entry.Data.Length;
                 }
+                return bytesWritten;
             } else {
                 var ans = new StringBuilder();
                 ans.Append("Name, ");
@@ -841,6 +874,7 @@ namespace BinderTool
                 }
                 Directory.CreateDirectory(Directory.GetParent(outputPath).FullName);
                 File.WriteAllText(outputPath + ".csv", ans.ToString());
+                return (ulong)ans.Length;
             }
         }
 
@@ -852,7 +886,7 @@ namespace BinderTool
             }
         }
 
-        public static void UnpackFmgFile(Stream inputStream, string outputPath)
+        public static ulong UnpackFmgFile(Stream inputStream, string outputPath)
         {
             FmgFile fmgFile = FmgFile.ReadFmgFile(inputStream);
 
@@ -867,6 +901,7 @@ namespace BinderTool
 
             outputPath += ".txt";
             File.WriteAllText(outputPath, builder.ToString());
+            return (ulong)new FileInfo(outputPath).Length;
         }
 
         private static void UnpackEnflFile(Options options)

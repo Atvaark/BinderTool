@@ -1,4 +1,5 @@
-﻿using BinderTool.Core.Bhd5;
+﻿using BinderTool.Core;
+using BinderTool.Core.Bhd5;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -59,7 +60,7 @@ namespace BinderTool
                         var hash = FileNameDictionary.GetHashCodeLong(next);
                         if (hashes.Contains(hash)) {
                             ans.Add(next);
-                            Debug.WriteLine($"{hash} {next}");
+                            //Debug.WriteLine($"{hash} {next}");
                         }
                     }
                 }
@@ -360,7 +361,7 @@ namespace BinderTool
                 }
             );
         }
-        public static (string, GetEnumerator[]) data0ShaderSearch()
+        public static (string, GetEnumerator[], string, string) data0ShaderSearch()
         {
             return (
                 "/shader/{1}{0}",
@@ -372,7 +373,7 @@ namespace BinderTool
                         "GXRendererShader.shaderbnd",
                         "GXGui.shaderbnd",
                         "GXFlverShader.shaderbnd",
-                        "GXFxfShader.shaderbnd",
+                        "GXFfxShader.shaderbnd",
                         "GXDecal.shaderbnd",
                         "GXPostEffect.shaderbnd",
                         "GXRayTracing.shaderbnd",
@@ -383,7 +384,9 @@ namespace BinderTool
                         "SpeedTree.shaderbdlebnd",
                         "SpeedTree_[RT].shaderbdlebnd"
                     }
-                }
+                },
+                "/shader",
+                "shader:"
             );
         }
         public static (string, GetEnumerator[], string, string) data0FontSearch()
@@ -946,6 +949,123 @@ namespace BinderTool
                 "chrtexbnd:"
             );
         }
+        public static (string, GetEnumerator[], string, string) sdSearch()
+        {
+            return (
+                "/{0}cs_c{1}.bnk",
+                new GetEnumerator[] {
+                    () => new string[] {"", "enus/"},
+                    Range0Padded(0, 10000, 4),
+                },
+                "/",
+                "wwise:/"
+            );
+        }
+        public static (string, GetEnumerator[], string, string) sdSearch2()
+        {
+            return (
+                "/aeg{0}_{1}.bnk",
+                new GetEnumerator[] {
+                    Range0Padded(0, 1000, 3),
+                    Range0Padded(0, 1000, 3),
+                },
+                "/",
+                "wwise:/"
+            );
+        }
+        public static (string, GetEnumerator[], string, string) sdSearch3()
+        {
+            return (
+                "/cs_{0}m{1}{2}.bnk",
+                new GetEnumerator[] {
+                    () => new string[] {"", "s"},
+                    Range0Padded(0, 100, 2),
+                    () => (new string[] { "" }).AsEnumerable().Union(Range0Padded(0, 1000, 3)().Select(s => "_"+s)),
+                },
+                "/",
+                "wwise:/"
+            );
+        }
+        public static (string, GetEnumerator[], string, string) sdSearch4()
+        {
+            return (
+                "/{0}.bnk",
+                new GetEnumerator[] {
+                    () => new string[] {"cs_main", "cs_smain", "init", "vc700", "enus/vcmain"},
+                },
+                "/enus",
+                "wwise:/enus"
+            );
+        }
+        public static (string, GetEnumerator[], string, string) sdSearch5()
+        {
+            return (
+                "/{0}s{1}_{2}_{3}.bnk",
+                new GetEnumerator[] {
+                    () => new string[] {"", "enus/"},
+                    Range0Padded(0, 100, 2),
+                    Range0Padded(0, 100, 2),
+                    Range0Padded(0, 10000, 4),
+                },
+                "/enus",
+                "wwise:/enus"
+            );
+        }
+        public static (string, GetEnumerator[], string, string) sdSearch6()
+        {
+            return (
+                "/enus/vc{0}.bnk",
+                new GetEnumerator[] {
+                    Range0Padded(0, 1000, 3),
+                },
+                "/enus",
+                "wwise:/enus"
+            );
+        }
+        public static (string, GetEnumerator[], string, string, GetEnumerator[]) sdSearch7()
+        {
+            return (
+                "/enus/wem/{0}/{0}{1}.wem",
+                new GetEnumerator[] {
+                    () => Enumerable.Range(0, 100000000).SelectMany(i => new string[] {i.ToString(), new string(i.ToString().Reverse().ToArray()) })
+                },
+                "/enus",
+                "wwise:/enus",
+                new GetEnumerator[] {
+                    () => Enumerable.Range(10, 10).Select(i => i.ToString()),
+                    () => Enumerable.Range(20, 10).Select(i => i.ToString()),
+                    () => Enumerable.Range(30, 10).Select(i => i.ToString()),
+                    () => Enumerable.Range(40, 10).Select(i => i.ToString()),
+                    () => Enumerable.Range(50, 10).Select(i => i.ToString()),
+                    () => Enumerable.Range(60, 10).Select(i => i.ToString()),
+                    () => Enumerable.Range(70, 10).Select(i => i.ToString()),
+                    () => Enumerable.Range(80, 10).Select(i => i.ToString()),
+                    () => Enumerable.Range(90, 10).Select(i => i.ToString()),
+                }
+            );
+        }
+        public static (string, GetEnumerator[], string, string, GetEnumerator[]) sdSearch8()
+        {
+            return (
+                "/wem/{0}/{0}{1}.wem",
+                new GetEnumerator[] {
+                    () => Enumerable.Range(0, 100000000).SelectMany(i => new string[] {i.ToString(), new string(i.ToString().Reverse().ToArray()) })
+                },
+                "/wem",
+                "wwise:/wem",
+                new GetEnumerator[] {
+                    () => Enumerable.Range(10, 10).Select(i => i.ToString()),
+                    () => Enumerable.Range(20, 10).Select(i => i.ToString()),
+                    () => Enumerable.Range(30, 10).Select(i => i.ToString()),
+                    () => Enumerable.Range(40, 10).Select(i => i.ToString()),
+                    () => Enumerable.Range(50, 10).Select(i => i.ToString()),
+                    () => Enumerable.Range(60, 10).Select(i => i.ToString()),
+                    () => Enumerable.Range(70, 10).Select(i => i.ToString()),
+                    () => Enumerable.Range(80, 10).Select(i => i.ToString()),
+                    () => Enumerable.Range(90, 10).Select(i => i.ToString()),
+                }
+            );
+        }
         public static (string, GetEnumerator[], string, string) data0MenuSearch5()
         {
             return (
@@ -1124,6 +1244,39 @@ namespace BinderTool
             var ans = maps.ToArray();
             Array.Sort(ans);
             File.WriteAllLines(outputPath, ans);
+        }
+        public static void CreateHashList(string outputPath, params string[] bhds)
+        {
+            HashSet<ulong> hashes = new HashSet<ulong>();
+            foreach (var bhdName in bhds) {
+                var bhd = Bhd5File.Read(Program.DecryptBhdFile(bhdName, GameVersion.EldenRing), GameVersion.EldenRing);
+                foreach (var bucket in bhd.GetBuckets()) {
+                    foreach (var entry in bucket.GetEntries()) {
+                        hashes.Add(entry.FileNameHash);
+                    }
+                }
+            }
+            Directory.CreateDirectory(Path.GetDirectoryName(outputPath));
+            var output = new FileStream(outputPath, FileMode.Create);
+            var writer = new BinaryWriter(output);
+            var arr = hashes.ToArray();
+            Array.Sort(arr);
+            writer.Write((ulong)arr.Length);
+            foreach (var hash in arr) {
+                writer.Write(hash);
+            }
+            output.Close();
+        }
+        public static HashSet<ulong> ReadHashList(string filename)
+        {
+            var ans = new HashSet<ulong>();
+            var fs = new FileStream(filename, FileMode.Open);
+            var reader = new BinaryReader(fs);
+            var len = reader.ReadUInt64();
+            for (ulong i = 0; i < len; i++) {
+                ans.Add(reader.ReadUInt64());
+            }
+            return ans;
         }
         public static void UpdateDictionary(IEnumerable<string> newFiles, string currPrefix, string newPrefix, string savePath)
         {

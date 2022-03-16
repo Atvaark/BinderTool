@@ -26,21 +26,17 @@ namespace BinderTool.Core.Bdt5
 
         public override bool CanWrite => true;
 
-        public Bdt5InnerStream(Stream from, long length, long offset)
+        public Bdt5InnerStream(Stream from, long length)
         {
             this.length = length;
             this.streams = new List<MemoryStream>();
-            long startPos = from.Position;
             for (long pos = 0; pos < length; pos += MAX_STREAM_LEN)
             {
                 byte[] buf = new byte[MAX_STREAM_LEN];
-                from.Seek(offset + pos, SeekOrigin.Begin);
                 from.Read(buf, 0, (int)Math.Min(length - pos, MAX_STREAM_LEN));
                 streams.Add(new MemoryStream(buf));
             }
-            from.Seek(startPos, SeekOrigin.Begin);
         }
-        public Bdt5InnerStream(Stream from, long length) : this(from, length, 0) {}
         public Bdt5InnerStream(long length)
         {
             this.length = length;

@@ -25,7 +25,6 @@ namespace BinderTool.Core.Bdt5
                 return new MemoryStream(buffer);
             }
             var ans = new Bdt5InnerStream(_inputStream, fileSize);
-            _inputStream.Seek(fileSize, SeekOrigin.Current);
             return ans;
         }
 
