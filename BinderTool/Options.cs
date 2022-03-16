@@ -42,6 +42,9 @@ namespace BinderTool
         [Option("only-process-extension", Default = "", HelpText = "Makes the program process files with this extension only when extracting .bdt files, ignoring all other files, e.g. \".bnd\"")]
         public string OnlyProcessExtension { get; set; }
 
+        [Option("create-hash-list", Default = false, HelpText = "Outputs a file listing all filename hashes found in .bhd files in the input folder. Only works for Elden Ring.")]
+        public bool CreateHashList { get; set; }
+
         [Option('r', "recurse", Default = false, HelpText = "When using folder input, recurse to child folders")]
         public bool Recurse { get; set; }
 

@@ -160,6 +160,7 @@ namespace BinderTool
             { "other", "data0:/other" },
             { "mapinfotex", "data0:/other/mapinfotex" },
             { "material", "data0:/material" },
+            { "mtdbnd", "data0:/mtd" },
             { "shader", "data0:/shader" },
             { "shadertestdata", "debugdata:/testdata/Shaderbdle" },
             { "debugfont", "dvdroot:/font" },

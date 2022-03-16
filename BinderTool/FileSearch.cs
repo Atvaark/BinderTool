@@ -16,7 +16,7 @@ namespace BinderTool
     {
         public delegate IEnumerable<string> GetEnumerator();
 
-        public static List<string> parallelSearch(Bhd5File header, string stub, GetEnumerator[] firstLevel, GetEnumerator[] rest)
+        public static List<string> ParallelSearch(HashSet<ulong> hashes, string stub, GetEnumerator[] firstLevel, GetEnumerator[] rest)
         {
             List<string> ans = new List<string>();
             var tasks = new List<Task<List<string>>>();
@@ -25,7 +25,7 @@ namespace BinderTool
                 gens.AddRange(rest);
                 var cs = new TaskCompletionSource<List<String>>();
                 new Thread(() => {
-                    var ans2 = search(header, stub, gens.ToArray());
+                    var ans2 = Search(hashes, stub, gens.ToArray());
                     cs.SetResult(ans2);
                 }).Start();
                 tasks.Add(cs.Task);
@@ -37,14 +37,8 @@ namespace BinderTool
             return ans;
         }
 
-        public static List<string> search(Bhd5File header, string stub, GetEnumerator[] generators)
+        public static List<string> Search(HashSet<ulong> hashes, string stub, GetEnumerator[] generators)
         {
-            HashSet<ulong> hashes = new HashSet<ulong>();
-            foreach (var bucket in header.GetBuckets()) {
-                foreach (var entry in bucket.GetEntries()) {
-                    hashes.Add(entry.FileNameHash);
-                }
-            }
             List<string> ans = new List<string>();
             var stack = new List<(string, IEnumerable<string>, int)> {
                 (stub, generators[0](), 1)
@@ -60,7 +54,7 @@ namespace BinderTool
                         var hash = FileNameDictionary.GetHashCodeLong(next);
                         if (hashes.Contains(hash)) {
                             ans.Add(next);
-                            //Debug.WriteLine($"{hash} {next}");
+                            Debug.WriteLine($"{hash} {next}");
                         }
                     }
                 }
@@ -193,138 +187,112 @@ namespace BinderTool
                 () => Enumerable.Range(0, 10000).Select(i => string.Format("{0:D4}", i))
             }
         );
-        public static (string, GetEnumerator[]) data2MapEnvmapSearch(string extractedFolderPath)
-        {
-
-            return (
+        public static (string, GetEnumerator[], string, string) data2MapEnvmapSearch = (
                 "/map/{0}_envmap_{1}_{2}_{3}.tpfbnd.dcx",
                 new GetEnumerator[] {
                     () => GetMaps().Select(s => s.Substring(0, 3) + "/" + s.Substring(0, 12) + "/" + s.Substring(0, 12)),
                     Range0Padded(0, 100, 2),
                     () => new string[] {"low", "middle", "high"},
                     Range0Padded(0, 100, 2)
-                }
+                },
+                "/map",
+                "map:/"
             );
-        }
-        public static (string, GetEnumerator[]) data2MapIvinfoSearch(string extractedFolderPath)
-        {
-
-            return (
+        public static (string, GetEnumerator[], string, string) data2MapIvinfoSearch = (
                 "/map/{1}_{0}.ivinfobnd.dcx",
                 new GetEnumerator[] {
                     () => new string[] {"low", "middle", "high"},
                     () => GetMaps().Select(s => s.Substring(0, 3) + "/" + s.Substring(0, 12) + "/" + s.Substring(0, 12)),
-                }
+                },
+                "/map",
+                "map:/"
             );
-        }
-        public static (string, GetEnumerator[]) data2MapBtlSearch(string extractedFolderPath)
-        {
-
-            return (
+        public static (string, GetEnumerator[], string, string) data2MapBtlSearch = (
                 "/map/{0}_{1}.btl.dcx",
                 new GetEnumerator[] {
                     () => GetMaps().Select(s => s.Substring(0, 3) + "/" + s.Substring(0, 12) + "/" + s.Substring(0, 12)),
                     Range0Padded(0, 10000, 4),
-                }
+                },
+                "/map",
+                "map:/"
             );
-        }
-        public static (string, GetEnumerator[]) data2MapFvbSearch(string extractedFolderPath)
-        {
-
-            return (
+        public static (string, GetEnumerator[], string, string) data2MapFvbSearch = (
                 "/map/{0}_{1}.fvb.dcx",
                 new GetEnumerator[] {
                     () => GetMaps().Select(s => s.Substring(0, 3) + "/" + s.Substring(0, 12) + "/" + s.Substring(0, 12)),
                     Range0Padded(0, 10000, 4),
-                }
+                },
+                "/",
+                "map:/"
             );
-        }
-        public static (string, GetEnumerator[]) data2MapNvmhktbndSearch(string extractedFolderPath)
-        {
-
-            return (
+        public static (string, GetEnumerator[], string, string) data2MapNvmhktbndSearch = (
                 "/map/{0}.nvmhktbnd.dcx",
                 new GetEnumerator[] {
                     () => GetMaps().Select(s => s.Substring(0, 3) + "/" + s.Substring(0, 12) + "/" + s.Substring(0, 12)),
-                }
+                },
+                "/map",
+                "map:/"
             );
-        }
-        public static (string, GetEnumerator[]) data2MapMpwSearch(string extractedFolderPath)
-        {
-
-            return (
+        public static (string, GetEnumerator[], string, string) data2MapMpwSearch = (
                 "/map/{0}.mpw.dcx",
                 new GetEnumerator[] {
                     () => GetMaps().Select(s => s.Substring(0, 3) + "/" + s.Substring(0, 12) + "/" + s.Substring(0, 12)),
-                }
+                },
+                "/map",
+                "map:/"
             );
-        }
-        public static (string, GetEnumerator[]) data2MapFlverSearch(string extractedFolderPath)
-        {
-
-            return (
+        public static (string, GetEnumerator[], string, string) data2MapFlverSearch = (
                 "/map/{0}.flver.dcx",
                 new GetEnumerator[] {
                     () => GetMaps().Select(s => s.Substring(0, 3) + "/" + s.Substring(0, 12) + "/" + s.Substring(0, 12)),
-                }
+                },
+                "/map",
+                "map:/"
             );
-        }
-        public static (string, GetEnumerator[]) data2MapNvcSearch(string extractedFolderPath)
-        {
-
-            return (
+        public static (string, GetEnumerator[], string, string) data2MapNvcSearch = (
                 "/map/nvc/{0}_{1}.nvc.dcx",
                 new GetEnumerator[] {
                     () => GetMaps(),
                     () => GetMaps(),
-                }
+                },
+                "/map",
+                "map:/"
             );
-        }
-        public static (string, GetEnumerator[]) data2MapBreakgeomSearch(string extractedFolderPath)
-        {
-
-            return (
+        public static (string, GetEnumerator[], string, string) data2MapBreakgeomSearch = (
                 "/map/breakgeom/lod{0}/{1}_lod{0}.breakgeom.dcx",
                 new GetEnumerator[] {
                     Range0Padded(0, 10, 1),
                     () => GetMaps(),
-                }
+                },
+                "/map",
+                "map:/"
             );
-        }
-        public static (string, GetEnumerator[]) data2MaptpfCommonSearch(string extractedFolderPath)
-        {
-
-            return (
+        public static (string, GetEnumerator[], string, string) data2MaptpfCommonSearch = (
                 "/map/{0}_CGrading.tpf.dcx",
                 new GetEnumerator[] {
                     () => Enumerable.Range(0, 100).Select(i => string.Format("m{0:D2}", i)).Select(s => $"{s}/Common/{s}")
-                }
+                },
+                "/map",
+                "map:/"
             );
-        }
-        public static (string, GetEnumerator[]) data2MaptpfCommonSearch2(string extractedFolderPath)
-        {
-
-            return (
+        public static (string, GetEnumerator[], string, string) data2MaptpfCommonSearch2 = (
                 "/map/{0}_{1}.tpf.dcx",
                 new GetEnumerator[] {
                     () => Enumerable.Range(0, 100).Select(i => string.Format("m{0:D2}", i)).Select(s => $"{s}/Common/{s}"),
                     () => Enumerable.Range(0, 10000).Select(i => string.Format("m{0:D4}", i))
-                }
+                },
+                "/map",
+                "map:/"
             );
-        }
-        public static (string, GetEnumerator[]) data0MapinfotexSearch()
-        {
-
-            return (
+        public static (string, GetEnumerator[], string, string) data0MapinfotexSearch = (
                 "/other/mapinfotex/{0}.mapinfotexbnd.dcx",
                 new GetEnumerator[] {
                     () => GetMaps(),
-                }
+                },
+                "/",
+                "mapinfotex:/"
             );
-        }
-        public static (string, GetEnumerator[]) data0OtherSearch()
-        {
-            return (
+        public static (string, GetEnumerator[], string, string) data0OtherSearch = (
                 "/other/{0}",
                 new GetEnumerator[] {
                     () => new string[] { 
@@ -344,12 +312,11 @@ namespace BinderTool
                         "MovTae.movtae",
                         "MovTae.movtae.dcx",
                     }
-                }
+                },
+                "/",
+                "other:/"
             );
-        }
-        public static (string, GetEnumerator[]) data0MaterialSearch()
-        {
-            return (
+        public static (string, GetEnumerator[], string, string) data0MaterialSearch = (
                 "/material/{1}{0}",
                 new GetEnumerator[] {
                     () => new string[] {"", ".dcx"},
@@ -358,12 +325,11 @@ namespace BinderTool
                         "AllMaterial.matbinbnd",
                         "SpeedTree.matbinbnd"
                     }
-                }
+                },
+                "/",
+                "material:/"
             );
-        }
-        public static (string, GetEnumerator[], string, string) data0ShaderSearch()
-        {
-            return (
+        public static (string, GetEnumerator[], string, string) data0ShaderSearch = (
                 "/shader/{1}{0}",
                 new GetEnumerator[] {
                     () => new string[] {"", ".dcx"},
@@ -388,10 +354,7 @@ namespace BinderTool
                 "/shader",
                 "shader:"
             );
-        }
-        public static (string, GetEnumerator[], string, string) data0FontSearch()
-        {
-            return (
+        public static (string, GetEnumerator[], string, string) data0FontSearch = (
                 "/font/{1}/font.gfx{0}",
                 new GetEnumerator[] {
                     () => new string[] {"", ".dcx"},
@@ -411,10 +374,7 @@ namespace BinderTool
                 "/font/",
                 "font:/"
             );
-        }
-        public static (string, GetEnumerator[], string, string) data0ActionSearch()
-        {
-            return (
+        public static (string, GetEnumerator[], string, string) data0ActionSearch = (
                 "/action/{1}{0}",
                 new GetEnumerator[] {
                     () => new string[] {"", ".dcx"},
@@ -431,10 +391,7 @@ namespace BinderTool
                 "/action",
                 "action:"
             );
-        }
-        public static (string, GetEnumerator[], string, string) data0ActscriptSearch()
-        {
-            return (
+        public static (string, GetEnumerator[], string, string) data0ActscriptSearch = (
                 "/action/script/c{1}.hks{0}",
                 new GetEnumerator[] {
                     () => new string[] {"", ".dcx"},
@@ -443,10 +400,7 @@ namespace BinderTool
                 "/action/script",
                 "actscript:"
             );
-        }
-        public static (string, GetEnumerator[], string, string) data0TalkscriptSearch()
-        {
-            return (
+        public static (string, GetEnumerator[], string, string) data0TalkscriptSearch = (
                 "/script/talk/m{0}_{1}_{2}_{3}.talkesdbnd.dcx",
                 new GetEnumerator[] {
                     Range0Padded(0, 100, 2),
@@ -457,10 +411,7 @@ namespace BinderTool
                 "/script/talk",
                 "talkscript:"
             );
-        }
-        public static (string, GetEnumerator[], string, string) data0AiscriptSearch()
-        {
-            return (
+        public static (string, GetEnumerator[], string, string) data0AiscriptSearch = (
                 "/script/m{0}_{1}_{2}_{3}.luabnd.dcx",
                 new GetEnumerator[] {
                     Range0Padded(0, 100, 2),
@@ -471,10 +422,7 @@ namespace BinderTool
                 "/script",
                 "aiscript:"
             );
-        }
-        public static (string, GetEnumerator[], string, string) data0AiscriptSearch2()
-        {
-            return (
+        public static (string, GetEnumerator[], string, string) data0AiscriptSearch2 = (
                 "/script/{1}_{0}.luabnd.dcx",
                 new GetEnumerator[] {
                     () => new string[] {"logic", "battle"},
@@ -483,10 +431,7 @@ namespace BinderTool
                 "/script",
                 "aiscript:"
             );
-        }
-        public static (string, GetEnumerator[], string, string) data0MsgSearch()
-        {
-            return (
+        public static (string, GetEnumerator[], string, string) data0MsgSearch = (
                 "/msg/{1}/{0}.msgbnd.dcx",
                 new GetEnumerator[] {
                     () => new string[] {"item", "menu", "ngword", "sellregion"},
@@ -499,10 +444,7 @@ namespace BinderTool
                 "/msg",
                 "msg:"
             );
-        }
-        public static (string, GetEnumerator[], string, string) data0ParamSearch()
-        {
-            return (
+        public static (string, GetEnumerator[], string, string) data0ParamSearch = (
                 "/param/{0}.parambnd.dcx",
                 new GetEnumerator[] {
                     () => new string[] {
@@ -514,10 +456,7 @@ namespace BinderTool
                 "/param",
                 "param:"
             );
-        }
-        public static (string, GetEnumerator[], string, string) data0GparamSearch()
-        {
-            return (
+        public static (string, GetEnumerator[], string, string) data0GparamSearch = (
                 "/param/drawparam/{1}.gparam{0}",
                 new GetEnumerator[] {
                     () => new string[] {"", ".dcx"},
@@ -541,10 +480,7 @@ namespace BinderTool
                 "/param/drawparam",
                 "gparam:"
             );
-        }
-        public static (string, GetEnumerator[], string, string) data0GparamSearch2()
-        {
-            return (
+        public static (string, GetEnumerator[], string, string) data0GparamSearch2 = (
                 "/param/drawparam/s{0}_{1}_{2}.gparam.dcx",
                 new GetEnumerator[] {
                     Range0Padded(0, 100, 2),
@@ -554,10 +490,7 @@ namespace BinderTool
                 "/param/drawparam",
                 "gparam:"
             );
-        }
-        public static (string, GetEnumerator[], string, string) data0GparamSearch3()
-        {
-            return (
+        public static (string, GetEnumerator[], string, string) data0GparamSearch3 = (
                 "/param/drawparam/m{1}_{2}_{3}{0}.gparam.dcx",
                 new GetEnumerator[] {
                     () => new string[] {"", "_WeatherBase", "_WeatherOutdoor", "_CommonEvent", "_CommonEventMapUnique"},
@@ -568,10 +501,7 @@ namespace BinderTool
                 "/param/drawparam",
                 "gparam:"
             );
-        }
-        public static (string, GetEnumerator[], string, string) data0GparamSearch4()
-        {
-            return (
+        public static (string, GetEnumerator[], string, string) data0GparamSearch4 = (
                 "/param/drawparam/s{0}_{1}_{2}_WeatherOverride_{3}.gparam.dcx",
                 new GetEnumerator[] {
                     Range0Padded(0, 100, 2),
@@ -582,10 +512,7 @@ namespace BinderTool
                 "/param/drawparam",
                 "gparam:"
             );
-        }
-        public static (string, GetEnumerator[], string, string) data0EventSearch()
-        {
-            return (
+        public static (string, GetEnumerator[], string, string) data0EventSearch = (
                 "/event/{1}{0}",
                 new GetEnumerator[] {
                     () => new string[] {"", ".dcx"},
@@ -599,10 +526,7 @@ namespace BinderTool
                 "/event",
                 "event:"
             );
-        }
-        public static (string, GetEnumerator[], string, string) data0EventSearch2()
-        {
-            return (
+        public static (string, GetEnumerator[], string, string) data0EventSearch2 = (
                 "/event/m{0}_{1}_{2}_{3}.emevd.dcx",
                 new GetEnumerator[] {
                     Range0Padded(0, 100, 2),
@@ -613,10 +537,7 @@ namespace BinderTool
                 "/event",
                 "event:"
             );
-        }
-        public static (string, GetEnumerator[], string, string) data0EventSearch3()
-        {
-            return (
+        public static (string, GetEnumerator[], string, string) data0EventSearch3 = (
                 "/event/m{0}.emevd.dcx",
                 new GetEnumerator[] {
                     Range0Padded(0, 100, 2)
@@ -624,10 +545,7 @@ namespace BinderTool
                 "/event",
                 "event:"
             );
-        }
-        public static (string, GetEnumerator[], string, string) data0MenuSearch()
-        {
-            return (
+        public static (string, GetEnumerator[], string, string) data0MenuSearch = (
                 "/menu/{1}{0}",
                 new GetEnumerator[] {
                     () => new string[] {"", ".dcx"},
@@ -638,10 +556,7 @@ namespace BinderTool
                 "/menu",
                 "menu:"
             );
-        }
-        public static (string, GetEnumerator[], string, string) data0MenuSearch2()
-        {
-            return (
+        public static (string, GetEnumerator[], string, string) data0MenuSearch2 = (
                 "/menu/{0}{1}{2}.sblytbnd.dcx",
                 new GetEnumerator[] {
                     () => new string[] {"", "Hi/", "Low/"},
@@ -665,10 +580,7 @@ namespace BinderTool
                 "/menu",
                 "menu:"
             );
-        }
-        public static (string, GetEnumerator[], string, string) data0MenuSearch3()
-        {
-            return (
+        public static (string, GetEnumerator[], string, string) data0MenuSearch3 = (
                 "/menu/{1}{2}{3}.{0}",
                 new GetEnumerator[] {
                     () => new string[] {"tpf.dcx", "tpfbhd"},
@@ -693,10 +605,7 @@ namespace BinderTool
                 "/menu",
                 "menu:"
             );
-        }
-        public static (string, GetEnumerator[], string, string) data0MenuSearch4()
-        {
-            return (
+        public static (string, GetEnumerator[], string, string) data0MenuSearch4 = (
                 "/menu/MapImage/{0}{1}.tpf.dcx",
                 new GetEnumerator[] {
                     () => Enumerable.Range(0, byte.MaxValue).Select(c => ""+(char)c),
@@ -705,10 +614,7 @@ namespace BinderTool
                 "/menu",
                 "menu:"
             );
-        }
-        public static (string, GetEnumerator[], string, string) data0PartsSearch()
-        {
-            return (
+        public static (string, GetEnumerator[], string, string) data0PartsSearch = (
                 "/parts/{1}{2}_{3}_{4}{0}.partsbnd.dcx",
                 new GetEnumerator[] {
                     () => new string[] {"", "_l"},
@@ -720,10 +626,7 @@ namespace BinderTool
                 "/parts",
                 "parts:"
             );
-        }
-        public static (string, GetEnumerator[], string, string) data0FacegenSearch()
-        {
-            return (
+        public static (string, GetEnumerator[], string, string) data0FacegenSearch = (
                 "/facegen/{0}.fgbnd.dcx",
                 new GetEnumerator[] {
                     () => new string[] {"FaceGen"}
@@ -731,10 +634,7 @@ namespace BinderTool
                 "/facegen",
                 "facegen:"
             );
-        }
-        public static (string, GetEnumerator[], string, string) data0CutsceneSearch()
-        {
-            return (
+        public static (string, GetEnumerator[], string, string) data0CutsceneSearch = (
                 "/cutscene/s{0}_{1}_{2}.cutscenebnd.dcx",
                 new GetEnumerator[] {
                     Range0Padded(0, 100, 2),
@@ -744,13 +644,10 @@ namespace BinderTool
                 "/cutscene",
                 "cutscenebnd:"
             );
-        }
-        public static (string, GetEnumerator[], string, string) data0CutsceneSearch2()
-        {
-            return (
+        public static (string, GetEnumerator[], string, string) data0CutsceneSearch2 = (
                 "/cutscene/{0}_{1}.tpfbnd.dcx",
                 new GetEnumerator[] {
-                    () => GetFiles().Select(f => {
+                    () => GetFilesHashable().Select(f => {
                         var m = Regex.Match(f, @"(s\d\d_\d\d_\d\d\d\d).cutscenebnd");
                         if (m.Success) return m.Groups[1].Value;
                         return null;
@@ -760,10 +657,7 @@ namespace BinderTool
                 "/cutscene",
                 "cutscenebnd:"
             );
-        }
-        public static (string, GetEnumerator[], string, string) data0MovieSearch()
-        {
-            return (
+        public static (string, GetEnumerator[], string, string) data0MovieSearch = (
                 "/movie/{1}.bk2{0}",
                 new GetEnumerator[] {
                     () => new string[] {"", ".dcx"},
@@ -772,10 +666,7 @@ namespace BinderTool
                 "/movie",
                 "movie:"
             );
-        }
-        public static (string, GetEnumerator[], string, string) data0WwiseSearch()
-        {
-            return (
+        public static (string, GetEnumerator[], string, string) data0WwiseSearch = (
                 "/sound/{0}.mobnkinfo",
                 new GetEnumerator[] {
                     () => new string[] {"SoundbanksInfo"}
@@ -783,10 +674,7 @@ namespace BinderTool
                 "/sound",
                 "wwise_mobnkinfo:"
             );
-        }
-        public static (string, GetEnumerator[], string, string) data0WwiseSearch2()
-        {
-            return (
+        public static (string, GetEnumerator[], string, string) data0WwiseSearch2 = (
                 "/sound/{0}{1}.moaeibnd.dcx",
                 new GetEnumerator[] {
                     () => new string[] {"", "enus/"},
@@ -795,10 +683,7 @@ namespace BinderTool
                 "/sound",
                 "wwise_moaeibnd:"
             );
-        }
-        public static (string, GetEnumerator[], string, string) data0SfxbndSearch()
-        {
-            return (
+        public static (string, GetEnumerator[], string, string) data0SfxbndSearch = (
                 "/sfx/SfxBnd_c{0}.ffxbnd.dcx",
                 new GetEnumerator[] {
                     Range0Padded(0, 10000, 4)
@@ -806,10 +691,7 @@ namespace BinderTool
                 "/sfx",
                 "sfxbnd:"
             );
-        }
-        public static (string, GetEnumerator[], string, string) data0SfxbndSearch2()
-        {
-            return (
+        public static (string, GetEnumerator[], string, string) data0SfxbndSearch2 = (
                 "/sfx/SfxBnd_m{0}.ffxbnd.dcx",
                 new GetEnumerator[] {
                     Range0Padded(0, 100, 2)
@@ -817,10 +699,7 @@ namespace BinderTool
                 "/sfx",
                 "sfxbnd:"
             );
-        }
-        public static (string, GetEnumerator[], string, string) data0SfxbndSearch3()
-        {
-            return (
+        public static (string, GetEnumerator[], string, string) data0SfxbndSearch3 = (
                 "/sfx/SfxBnd_m{0}_{1}_{2}_{3}.ffxbnd.dcx",
                 new GetEnumerator[] {
                     Range0Padded(0, 100, 2),
@@ -831,10 +710,7 @@ namespace BinderTool
                 "/sfx",
                 "sfxbnd:"
             );
-        }
-        public static (string, GetEnumerator[], string, string) data0SfxbndSearch4()
-        {
-            return (
+        public static (string, GetEnumerator[], string, string) data0SfxbndSearch4 = (
                 "/sfx/{0}.ffxbnd.dcx",
                 new GetEnumerator[] {
                     () => new string[] {"SfxBnd_CommonEffects"}
@@ -842,10 +718,7 @@ namespace BinderTool
                 "/sfx",
                 "sfxbnd:"
             );
-        }
-        public static (string, GetEnumerator[], string, string) data1AetTpfSearch()
-        {
-            return (
+        public static (string, GetEnumerator[], string, string) data1AetTpfSearch = (
                 "/asset/aet/aet{1}/aet{1}_{2}{0}.tpf.dcx",
                 new GetEnumerator[] {
                     () => new string[] {"", "_l", "_billboards", "_billboards_l"},
@@ -855,10 +728,7 @@ namespace BinderTool
                 "/asset",
                 "asset:"
             );
-        }
-        public static (string, GetEnumerator[], string, string) data1AegGeombndSearch()
-        {
-            return (
+        public static (string, GetEnumerator[], string, string) data1AegGeombndSearch = (
                 "/asset/aeg/aeg{0}/aeg{0}_{1}.geombnd.dcx",
                 new GetEnumerator[] {
                     Range0Padded(0, 1000, 3),
@@ -867,10 +737,7 @@ namespace BinderTool
                 "/asset",
                 "asset:"
             );
-        }
-        public static (string, GetEnumerator[], string, string) data1AegGeomhkxbndSearch()
-        {
-            return (
+        public static (string, GetEnumerator[], string, string) data1AegGeomhkxbndSearch = (
                 "/asset/aeg/aeg{1}/aeg{1}_{2}_{0}.geomhkxbnd.dcx",
                 new GetEnumerator[] {
                     () => new string[] { "h", "l" },
@@ -880,10 +747,7 @@ namespace BinderTool
                 "/asset",
                 "asset:"
             );
-        }
-        public static (string, GetEnumerator[], string, string) data3ChrChrbndSearch()
-        {
-            return (
+        public static (string, GetEnumerator[], string, string) data3ChrChrbndSearch = (
                 "/chr/c{0}.chrbnd.dcx",
                 new GetEnumerator[] {
                     Range0Padded(0, 10000, 4),
@@ -891,10 +755,7 @@ namespace BinderTool
                 "/chr",
                 "chr:"
             );
-        }
-        public static (string, GetEnumerator[], string, string) data3ChrAnibndSearch()
-        {
-            return (
+        public static (string, GetEnumerator[], string, string) data3ChrAnibndSearch = (
                 "/chr/c{0}.anibnd.dcx",
                 new GetEnumerator[] {
                     Range0Padded(0, 10000, 4),
@@ -902,10 +763,7 @@ namespace BinderTool
                 "/chr",
                 "chranibnd:"
             );
-        }
-        public static (string, GetEnumerator[], string, string) data3ChrAnibndSearch2()
-        {
-            return (
+        public static (string, GetEnumerator[], string, string) data3ChrAnibndSearch2 = (
                 "/chr/c0000_a{0}.anibnd.dcx",
                 new GetEnumerator[] {
                     () => new string[] {"00_lo", "00_md", "00_hi", "0x", "1x", "2x", "3x", "4x", "5x", "6x", "7x", "8x", "9x"},
@@ -913,10 +771,7 @@ namespace BinderTool
                 "/chr",
                 "chranibnd:"
             );
-        }
-        public static (string, GetEnumerator[], string, string) data3ChrAnibndSearch3()
-        {
-            return (
+        public static (string, GetEnumerator[], string, string) data3ChrAnibndSearch3 = (
                 "/chr/c{1}_div{0}.anibnd.dcx",
                 new GetEnumerator[] {
                     Range0Padded(0, 100, 2),
@@ -925,10 +780,7 @@ namespace BinderTool
                 "/chr",
                 "chranibnd:"
             );
-        }
-        public static (string, GetEnumerator[], string, string) data3ChrBehbndSearch()
-        {
-            return (
+        public static (string, GetEnumerator[], string, string) data3ChrBehbndSearch = (
                 "/chr/c{0}.behbnd.dcx",
                 new GetEnumerator[] {
                     Range0Padded(0, 10000, 4),
@@ -936,10 +788,7 @@ namespace BinderTool
                 "/chr",
                 "chrbehbnd:"
             );
-        }
-        public static (string, GetEnumerator[], string, string) data3ChrTexbndSearch()
-        {
-            return (
+        public static (string, GetEnumerator[], string, string) data3ChrTexbndSearch = (
                 "/chr/c{1}_{0}.texbnd.dcx",
                 new GetEnumerator[] {
                     () => new string[] {"h", "l"},
@@ -948,10 +797,7 @@ namespace BinderTool
                 "/chr",
                 "chrtexbnd:"
             );
-        }
-        public static (string, GetEnumerator[], string, string) sdSearch()
-        {
-            return (
+        public static (string, GetEnumerator[], string, string) sdSearch = (
                 "/{0}cs_c{1}.bnk",
                 new GetEnumerator[] {
                     () => new string[] {"", "enus/"},
@@ -960,10 +806,7 @@ namespace BinderTool
                 "/",
                 "wwise:/"
             );
-        }
-        public static (string, GetEnumerator[], string, string) sdSearch2()
-        {
-            return (
+        public static (string, GetEnumerator[], string, string) sdSearch2 = (
                 "/aeg{0}_{1}.bnk",
                 new GetEnumerator[] {
                     Range0Padded(0, 1000, 3),
@@ -972,10 +815,7 @@ namespace BinderTool
                 "/",
                 "wwise:/"
             );
-        }
-        public static (string, GetEnumerator[], string, string) sdSearch3()
-        {
-            return (
+        public static (string, GetEnumerator[], string, string) sdSearch3 = (
                 "/cs_{0}m{1}{2}.bnk",
                 new GetEnumerator[] {
                     () => new string[] {"", "s"},
@@ -985,10 +825,7 @@ namespace BinderTool
                 "/",
                 "wwise:/"
             );
-        }
-        public static (string, GetEnumerator[], string, string) sdSearch4()
-        {
-            return (
+        public static (string, GetEnumerator[], string, string) sdSearch4 = (
                 "/{0}.bnk",
                 new GetEnumerator[] {
                     () => new string[] {"cs_main", "cs_smain", "init", "vc700", "enus/vcmain"},
@@ -996,10 +833,7 @@ namespace BinderTool
                 "/enus",
                 "wwise:/enus"
             );
-        }
-        public static (string, GetEnumerator[], string, string) sdSearch5()
-        {
-            return (
+        public static (string, GetEnumerator[], string, string) sdSearch5 = (
                 "/{0}s{1}_{2}_{3}.bnk",
                 new GetEnumerator[] {
                     () => new string[] {"", "enus/"},
@@ -1010,10 +844,7 @@ namespace BinderTool
                 "/enus",
                 "wwise:/enus"
             );
-        }
-        public static (string, GetEnumerator[], string, string) sdSearch6()
-        {
-            return (
+        public static (string, GetEnumerator[], string, string) sdSearch6 = (
                 "/enus/vc{0}.bnk",
                 new GetEnumerator[] {
                     Range0Padded(0, 1000, 3),
@@ -1021,7 +852,15 @@ namespace BinderTool
                 "/enus",
                 "wwise:/enus"
             );
-        }
+
+        public static (string, GetEnumerator[], string, string) pscSearch = (
+                "/shader/PipelineStateCache{0}{1}{2}{3}{4}{5}.dat.dcx",
+                new GetEnumerator[] {
+                    () => "abcdefghijklmnopqrstuvwxyz0123456789_[]".Select(s => ""+s),
+                },
+                "/shader",
+                "shader:/"
+            );
         public static (string, GetEnumerator[], string, string, GetEnumerator[]) sdSearch7()
         {
             return (
@@ -1066,9 +905,7 @@ namespace BinderTool
                 }
             );
         }
-        public static (string, GetEnumerator[], string, string) data0MenuSearch5()
-        {
-            return (
+        public static (string, GetEnumerator[], string, string) data0MenuSearch5 = (
                 "/menu/{0}{1}.gfx",
                 new GetEnumerator[] {
                     () => new string[] {
@@ -1193,25 +1030,27 @@ namespace BinderTool
                 "/menu",
                 "menu:"
             );
-        }
-        public static (string, GetEnumerator[]) devpatchSearch()
-        {
-            return (
+        public static (string, GetEnumerator[], string, string) devpatchSearch = (
                 "{0}",
                 new GetEnumerator[] {
-                    () => GetFiles()
+                    () => GetFilesHashable()
                     .SelectMany(f => f.EndsWith(".dcx") ? new string[] {f, f.Replace(".dcx", "")} : new string[] {f})
                     .SelectMany(f => new string[] {f+".devpatch", f+".devpatch.dcx"})
-                }
+                },
+                "/",
+                ""
             );
-        }
         public static IEnumerable<string> GetMaps()
         {
             return File.ReadLines("ERMaps.csv");
         }
-        public static IEnumerable<string> GetFiles()
+        public static IEnumerable<string> GetFilesHashable()
         {
             return File.ReadLines("DictionaryER.csv").Select(FileNameDictionary.MakeHashable);
+        }
+        public static IEnumerable<string> GetFiles()
+        {
+            return File.ReadLines("DictionaryER.csv");
         }
         public static (string, GetEnumerator[]) data2MapMapbndSearch(string extractedFolderPath)
         {

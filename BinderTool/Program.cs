@@ -38,6 +38,22 @@ namespace BinderTool
                 throw new FormatException("Input file not found");
             }
 
+            if (options.CreateHashList) {
+                var bhds = new List<string>();
+                var stack = new List<string>();
+                stack.AddRange(Directory.GetDirectories(options.InputPath));
+                stack.AddRange(Directory.GetFiles(options.InputPath));
+                while (stack.Count > 0) {
+                    var curr = stack.Last();
+                    stack.RemoveAt(stack.Count - 1);
+                    if (File.Exists(curr) && curr.EndsWith(".bhd")) bhds.Add(curr);
+                    if (Directory.Exists(curr)) stack.AddRange(Directory.GetFiles(curr));
+                }
+                if (options.OutputPath == null) options.OutputPath = Path.Combine(options.InputPath, "filename_hashes.hashlist");
+                FileSearch.CreateHashList(options.OutputPath, bhds.ToArray());
+                return;
+            }
+
             if (options.InputType == FileType.Detect || options.InputGameVersion == GameVersion.Detect) {
                 var (ty, g) = Options.GetFileType(options.InputPath);
                 if (options.InputType == FileType.Detect) options.InputType = ty;
