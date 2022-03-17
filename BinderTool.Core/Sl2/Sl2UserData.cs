@@ -1,4 +1,5 @@
-﻿using System.IO;
+﻿using System;
+using System.IO;
 using System.Text;
 
 namespace BinderTool.Core.Sl2
@@ -6,24 +7,33 @@ namespace BinderTool.Core.Sl2
     public class Sl2UserData
     {
         private const int UserDataIvSize = 16;
-        
+
         private readonly byte[] _key;
 
         private readonly byte[] _iv;
+
+        private readonly bool _encrypted;
 
         public Sl2UserData(byte[] key)
         {
             _key = key;
             _iv = new byte[UserDataIvSize];
+            _encrypted = Equals(key, new byte[key.Length]) ? true : false;
         }
 
         public string Name { get; set; }
 
         public byte[] EncryptedUserData { get; private set; }
 
-        //public byte[] DecryptedUserData => CryptographyUtility.DecryptAesCbc(new MemoryStream(EncryptedUserData), _key, _iv).ToArray();
-        public byte[] DecryptedUserData => null;
+        public byte[] DecryptedUserData()
+        {
+            if (!_encrypted)
+                return EncryptedUserData;
 
+            MemoryStream ms = new MemoryStream();
+            CryptographyUtility.DecryptAesCbc(new MemoryStream(EncryptedUserData), _key, _iv).CopyTo(ms);
+            return ms.ToArray();
+        }
 
         public static Sl2UserData ReadSl2UserData(Stream inputStream, byte[] key, int size, string name)
         {
