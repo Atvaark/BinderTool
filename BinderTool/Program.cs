@@ -596,7 +596,7 @@ namespace BinderTool
                 foreach (var userData in sl2File.UserData)
                 {
                     string outputFilePath = Path.Combine(options.OutputPath, userData.Name);
-                    File.WriteAllBytes(outputFilePath, userData.DecryptedUserData);
+                    File.WriteAllBytes(outputFilePath, userData.DecryptedUserData());
                 }
             }
         }
