@@ -9,7 +9,7 @@ namespace BinderTool.Core.Bdt5
 {
     public class Bdt5InnerStream : Stream
     {
-        public const int MAX_STREAM_LEN = 1_000_000;
+        public const int MAX_STREAM_LEN = 10_000_000;
 
         private List<MemoryStream> streams;
 
@@ -46,6 +46,13 @@ namespace BinderTool.Core.Bdt5
                 byte[] buf = new byte[MAX_STREAM_LEN];
                 streams.Add(new MemoryStream(buf));
             }
+        }
+
+        public byte[] ToArray()
+        {
+            byte[] ans = new byte[length];
+            this.Read(ans, 0, (int)length);
+            return ans;
         }
 
         public override void Flush() {}

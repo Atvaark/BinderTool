@@ -18,7 +18,7 @@ namespace BinderTool.Core
             return DecryptAes(inputStream, cipher, inputStream.Length);
         }
 
-        public static Stream DecryptAesCbc(Stream inputStream, byte[] key, byte[] iv)
+        public static Bdt5.Bdt5InnerStream DecryptAesCbc(Stream inputStream, byte[] key, byte[] iv)
         {
             var engine = new CbcBlockCipher(new AesEngine());
             KeyParameter keyParameter = new KeyParameter(key);
@@ -46,7 +46,7 @@ namespace BinderTool.Core
             return engine;
         }
 
-        private static Stream DecryptAes(Stream inputStream, IBlockCipher cipher, long length)
+        private static Bdt5.Bdt5InnerStream DecryptAes(Stream inputStream, IBlockCipher cipher, long length)
         {
             int blockSize = cipher.GetBlockSize();
             long inputLength = length;

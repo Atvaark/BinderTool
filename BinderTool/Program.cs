@@ -20,24 +20,48 @@ using System.Linq;
 using System.Linq.Expressions;
 using System.Collections.Generic;
 using BinderTool.Core.Enfl;
+using static BinderTool.FileSearch;
 
 namespace BinderTool
 {
     public static class Program
     {
+
+        private static HashSet<string> enflCollateSet = null;
+
         private static void Main(string[] args)
         {
-
+            //parse command line args
             var options = Parser.Default.ParseArguments<Options>(args).MapResult(
                 o => o,
                 e => { e.Select(v => { Console.WriteLine(v); return 0; }); return null; }
             );
             if (options == null) return;
 
+            //ensure the input file/directory exists
             if (!File.Exists(options.InputPath) && !Directory.Exists(options.InputPath)) {
                 throw new FormatException("Input file not found");
             }
 
+            //do a file name search over the hash list
+            //the input file is a .hashlist made by CreateHashList
+            //TODO: support games other than elden ring
+            if (options.FileNameSearch != "") {
+                var field = typeof(FileSearch).GetField(options.FileNameSearch);
+                if (field == null) {
+                    Console.WriteLine("Specified search not found.");
+                    Console.ReadKey();
+                    return;
+                }
+                var search = (FileSearch)field.GetValue(null);
+                var hashes = FileSearch.ReadHashList(options.InputPath);
+                if (options.OutputPath == "") search.Search(hashes);
+                else search.SearchAndUpdate(hashes, options.OutputPath);
+                return;
+            }
+
+            //creates a .hashlist file (binary file, just a u64 number of entries and then those entries as u64s)
+            //TODO: support games other than elden ring
             if (options.CreateHashList) {
                 var bhds = new List<string>();
                 var stack = new List<string>();
@@ -50,10 +74,13 @@ namespace BinderTool
                     if (Directory.Exists(curr)) stack.AddRange(Directory.GetFiles(curr));
                 }
                 if (options.OutputPath == null) options.OutputPath = Path.Combine(options.InputPath, "filename_hashes.hashlist");
-                FileSearch.CreateHashList(options.OutputPath, bhds.ToArray());
+                var ans = FileSearch.CreateHashList(options.OutputPath, bhds.ToArray());
+                Console.WriteLine($"Created hash list with {ans} hashes.");
                 return;
             }
 
+            //if the options didn't include a filetype or gameversion, they default to "detect"
+            //here we try to detect the type and/or game version automatically
             if (options.InputType == FileType.Detect || options.InputGameVersion == GameVersion.Detect) {
                 var (ty, g) = Options.GetFileType(options.InputPath);
                 if (options.InputType == FileType.Detect) options.InputType = ty;
@@ -68,6 +95,7 @@ namespace BinderTool
                 throw new FormatException("Unsupported input file format");
             }
 
+            //if the options didn't include an output path, make the output path the default for the given file type
             if (options.OutputPath == null) {
                 options.OutputPath = Path.Combine(
                     Path.GetDirectoryName(options.InputPath),
@@ -82,10 +110,12 @@ namespace BinderTool
                 }
             }
 
+            //if we're collating entryfilelists, make sure the output file exists
             if (options.CollateEnflPath.Length > 0 && !File.Exists(options.CollateEnflPath)) {
                 File.Create(options.CollateEnflPath).Close();
             }
 
+            //handle input type = folder
             if (options.InputType == FileType.Folder) {
                 Directory.CreateDirectory(options.OutputPath);
                 var stack = new List<string>();
@@ -127,13 +157,18 @@ namespace BinderTool
                     }
                 }
             } else {
+                //handle input type != folder
                 Process(options);
             }
+            //stop the console from closing automatically in debug builds
 #if (DEBUG)
             Console.ReadKey();
 #endif
         }
 
+        /// <summary>
+        /// Top-level method to process an input file. Should only be called from Main.
+        /// </summary>
         static void Process(Options options) {
 
             switch (options.InputType)
@@ -213,7 +248,7 @@ namespace BinderTool
             string bdtName = Path.GetFileName(options.InputPath);
             string fileNameWithoutExtension = bdtName.Replace("Ebl.bdt", "").Replace(".bdt", "");
             string archiveName = fileNameWithoutExtension.ToLower();
-            HashSet<string> enflCollateSet = null;
+            
             if (options.CollateEnflPath.Length != 0) {
                 enflCollateSet = new HashSet<string>();
                 foreach (var line in File.ReadAllLines(options.CollateEnflPath)) {
@@ -223,12 +258,14 @@ namespace BinderTool
 
             using (Bdt5FileStream bdtStream = Bdt5FileStream.OpenFile(options.InputPath, FileMode.Open, FileAccess.Read))
             {
+                Console.WriteLine("Decrypting the corresponding .bhd...");
                 Bhd5File bhdFile = Bhd5File.Read(
                     inputStream: DecryptBhdFile(
                         filePath: Path.ChangeExtension(options.InputPath, "bhd"),
                         version: options.InputGameVersion),
                     version: options.InputGameVersion
                     );
+                Console.WriteLine("Finished decrypting the .bhd.");
                 var entries = bhdFile.GetBuckets().SelectMany(b => b.GetEntries());
                 var numEntries = entries.Count();
                 Console.WriteLine($"\"{bdtName}\" has {numEntries} files.");
@@ -270,13 +307,14 @@ namespace BinderTool
                     }
 
                     string fileName;
-                    string dataExtension = GetDataExtension(data);
+                    string dataExtension = GetDataExtension(data, options.InputGameVersion);
                     bool fileNameFound = dictionary.TryGetFileName(entry.FileNameHash, archiveName, out fileName);
                     if (!fileNameFound)
                     {
                         fileNameFound = dictionary.TryGetFileName(entry.FileNameHash, archiveName, dataExtension, out fileName);
                     }
                     if (!fileNameFound) missingNames++;
+                    if (options.OnlyOutputUnknown && fileNameFound) continue;
 
                     string extension;
                     if (fileNameFound)
@@ -323,7 +361,7 @@ namespace BinderTool
                             if (fileNameFound) {
                                 extension = Path.GetExtension(fileName);
                             } else {
-                                extension = GetDataExtension(data);
+                                extension = GetDataExtension(data, options.InputGameVersion);
                                 fileName += extension;
                             }
                         } catch {
@@ -347,47 +385,8 @@ namespace BinderTool
                         entry.IsEncrypted,
                         fileNameFound);
 
-                    if (options.AutoExtractBnd && extension.EndsWith("bnd"))
-                    {
-                        bytesWritten += UnpackBndFile(data, options.OutputPath, options);
-                        extracted++;
-                        continue;
-                    }
-                    if (options.AutoExtractParam && extension == ".param") {
-                        bytesWritten += UnpackParamFile(data, fileNameWithoutExtension, Path.Combine(options.OutputPath, fileNameWithoutExtension));
-                        extracted++;
-                        continue;
-                    }
-                    if (options.AutoExtractFmg && extension == ".fmg") {
-                        bytesWritten += UnpackFmgFile(data, Path.Combine(options.OutputPath, fileName));
-                        extracted++;
-                        continue;
-                    }
-                    if (options.CollateEnflPath != null && options.CollateEnflPath.Length > 0 && extension == ".entryfilelist") {
-                        EntryFileListFile file = EntryFileListFile.ReadEntryFileListFile(data);
-                        File.AppendAllLines(options.CollateEnflPath, file.array2.Select(e => e.EntryFileName).Where(enflCollateSet.Add));
-                        extracted++;
-                        continue;
-                    } else if (options.AutoExtractEnfl && extension == ".entryfilelist") {
-                        var ans = UnpackEnflFile(data);
-                        var path = Path.Combine(options.OutputPath, fileName + ".csv");
-                        File.WriteAllText(path, ans);
-                        bytesWritten += (ulong)new FileInfo(path).Length;
-                        extracted++;
-                        continue;
-                    }
-                    string newFileNamePath = Path.Combine(options.OutputPath, fileName);
-                    Directory.CreateDirectory(Path.GetDirectoryName(newFileNamePath));
-                    FileStream outS = new FileStream(newFileNamePath, FileMode.OpenOrCreate);
-                    byte[] buf = new byte[1000];
-                    data.Seek(0, SeekOrigin.Begin);
-                    for (long pos = 0; pos < data.Length; pos += buf.Length)
-                    {
-                        int read = data.Read(buf, 0, buf.Length);
-                        outS.Write(buf, 0, read);
-                    }
-                    outS.Close();
-                    bytesWritten += (ulong)data.Length;
+                    ProcessFile(fileName, options, data);
+                    
                     extracted++;
                 }
                 Console.WriteLine($"Succesfully extracted {extracted}/{numEntries} files ({numEntries - extracted} failed), totaling {bytesWritten} bytes written to disk");
@@ -395,6 +394,60 @@ namespace BinderTool
             }
         }
 
+        /// <summary>
+        /// Inner processing method to handle files which may need further processing before being written to disk (e.g. a .bnd inside a .bdt).
+        /// </summary>
+        /// <param name="filename">The path and name of the file to be processed</param>
+        /// <param name="options"></param>
+        /// <param name="data">The binary contents of the file to be processed</param>
+        /// <returns>The number of bytes written to disk</returns>
+        private static ulong ProcessFile(string filename, Options options, Stream data)
+        {
+            string[] sp = filename.Split('/');
+            string[] sp2 = sp[sp.Length - 1].Split('.');
+            string extension = sp2[sp2.Length - 1];
+            //auto extract .bnd
+            if (options.AutoExtractBnd && extension.EndsWith("bnd")) {
+                return UnpackBndFile(data, options);
+            }
+            //auto extract .param
+            if (options.AutoExtractParam && extension == ".param") {
+                return UnpackParamFile(data, sp2[sp2.Length - 2], Path.Combine(options.OutputPath, filename.Replace(".param", "")));
+            }
+            //auto extract .fmg
+            if (options.AutoExtractFmg && extension == ".fmg") {
+                return UnpackFmgFile(data, Path.Combine(options.OutputPath, filename));
+            }
+            //auto extract/collate .entryfilelist
+            if (options.CollateEnflPath != null && options.CollateEnflPath.Length > 0 && extension == ".entryfilelist") {
+                EntryFileListFile file = EntryFileListFile.ReadEntryFileListFile(data);
+                File.AppendAllLines(options.CollateEnflPath, file.array2.Select(e => e.EntryFileName).Where(enflCollateSet.Add));
+                return 0;
+            } else if (options.AutoExtractEnfl && extension == ".entryfilelist") {
+                var ans = UnpackEnflFile(data);
+                var path = Path.Combine(options.OutputPath, filename + ".csv");
+                File.WriteAllText(path, ans);
+                return (ulong)new FileInfo(path).Length;
+            }
+            //not doing any auto extract, just output the raw file
+            string newFileNamePath = Path.Combine(options.OutputPath, filename);
+            Directory.CreateDirectory(Path.GetDirectoryName(newFileNamePath));
+            FileStream outS = new FileStream(newFileNamePath, FileMode.OpenOrCreate);
+            byte[] buf = new byte[1000];
+            data.Seek(0, SeekOrigin.Begin);
+            for (long pos = 0; pos < data.Length; pos += buf.Length) {
+                int read = data.Read(buf, 0, buf.Length);
+                outS.Write(buf, 0, read);
+            }
+            outS.Close();
+            return (ulong)data.Length;
+        }
+
+        /// <summary>
+        /// Attempts to read the length of a file contained in a .bdt if that size should be different from the size listed in the .bhd.
+        /// Currently only needed for .dcx files (compressed files).
+        /// </summary>
+        /// <returns>Whether the returned size should be used while reading from the .bdt instead of the size from the .bhd</returns>
         private static bool TryReadFileSize(Bhd5BucketEntry entry, Bdt5FileStream bdtStream, out long fileSize)
         {
             fileSize = 0;
@@ -418,25 +471,29 @@ namespace BinderTool
             return true;
         }
 
-        private static string GetDataExtension(Stream data)
+        /// <summary>
+        /// Attempts to figure out which extension the file should have based on its contents and returns that extension, or ".bin" if the extension could not be determined.
+        /// </summary>
+        private static string GetDataExtension(Stream data, GameVersion gameVersion)
         {
             string signature;
             string extension;
 
             if (TryGetAsciiSignature(data, 4, out signature)
-                && TryGetFileExtension(signature, out extension))
+                && TryGetFileExtension(signature, out extension, gameVersion))
             {
                 return extension;
             }
 
-            if (TryGetUnicodeSignature(data, 4, out signature)
-                && TryGetFileExtension(signature, out extension))
+            if ((gameVersion == GameVersion.Sekiro || gameVersion == GameVersion.EldenRing) 
+                && TryGetUnicodeSignature(data, 4, out signature)
+                && TryGetFileExtension(signature, out extension, gameVersion))
             {
                 return extension;
             }
 
             if (TryGetAsciiSignature(data, 26, out signature)
-                && TryGetFileExtension(signature.Substring(12, 14), out extension))
+                && TryGetFileExtension(signature.Substring(12, 14), out extension, gameVersion))
             {
                 return extension;
             }
@@ -445,18 +502,27 @@ namespace BinderTool
             return ".bin";
         }
 
+        /// <summary>
+        /// Inner method for <code>GetDataExtension</code> that returns the first 4 bytes of a file as a string.
+        /// </summary>
         private static bool TryGetAsciiSignature(Stream stream, int signatureLength, out string signature)
         {
             const int asciiBytesPerChar = 1;
             return TryGetSignature(stream, Encoding.ASCII, asciiBytesPerChar, signatureLength, out signature);
         }
 
+        /// <summary>
+        /// Inner method for <code>GetDataExtension</code> that returns the first 8 bytes of a file, interpreted as UTF-16 characters, as a string.
+        /// </summary>
         private static bool TryGetUnicodeSignature(Stream stream, int signatureLength, out string signature)
         {
             const int unicodeBytesPerChar = 2;
             return TryGetSignature(stream, Encoding.Unicode, unicodeBytesPerChar, signatureLength, out signature);
         }
 
+        /// <summary>
+        /// Inner method for <code>GetDataExtension</code> that returns the first <code>signatureLength</code> characters of a file as a string.
+        /// </summary>
         private static bool TryGetSignature(Stream stream, Encoding encoding, int bytesPerChar, int signatureLength, out string signature)
         {
             signature = null;
@@ -474,7 +540,11 @@ namespace BinderTool
             return true;
         }
 
-        private static bool TryGetFileExtension(string signature, out string extension)
+        /// <summary>
+        /// Inner method for <code>GetDataExtension</code> that returns the extension for a given signature, or ".bin" if the signature is unrecognized.
+        /// </summary>
+        /// <returns>Whether the signature was recognized</returns>
+        private static bool TryGetFileExtension(string signature, out string extension, GameVersion gameVersion)
         {
             switch (signature)
             {
@@ -513,8 +583,8 @@ namespace BinderTool
                     extension = ".breakobj";
                     return true;
                 case "filt":
-                    //extension = ".fltparam"; // DS II
-                    extension = ".gparam"; // DS III
+                    if (gameVersion == GameVersion.DarkSouls2) extension = ".fltparam"; // DS II
+                    else extension = ".gparam"; // DS III
                     return true;
                 case "VSDF":
                     extension = ".vsd";
@@ -588,12 +658,18 @@ namespace BinderTool
                 case "BKHD":
                     extension = ".bnk";
                     return true;
+                case "PSC\0": //shader pipeline state cache
+                    extension = ".dat";
+                    return true;
                 default:
                     extension = ".bin";
                     return false;
             }
         }
 
+        /// <summary>
+        /// Decrypts a .bhd and writes the decrypted binary file to disk
+        /// </summary>
         private static void UnpackBhdFile(Options options)
         {
             using (var inputStream = DecryptBhdFile(options.InputPath, options.InputGameVersion))
@@ -603,15 +679,22 @@ namespace BinderTool
             }
         }
 
+        /// <summary>
+        /// Unpacks a .bnd file from disk and writes the unpacked files to disk
+        /// </summary>
         private static void UnpackBndFile(Options options)
         {
             using (FileStream inputStream = new FileStream(options.InputPath, FileMode.Open, FileAccess.Read))
             {
-                UnpackBndFile(inputStream, options.OutputPath, options);
+                UnpackBndFile(inputStream, options);
             }
         }
 
-        private static ulong UnpackBndFile(Stream inputStream, string outputPath, Options options)
+        /// <summary>
+        /// Unpacks a .bnd file from a <code>Stream</code> ans writes the unpacked files to disk
+        /// </summary>
+        /// <returns>The number of bytes written to disk</returns>
+        private static ulong UnpackBndFile(Stream inputStream, Options options)
         {
             Bnd4File file = Bnd4File.ReadBnd4File(inputStream);
             ulong bytesWritten = 0;
@@ -620,19 +703,16 @@ namespace BinderTool
                 try
                 {
                     string fileName = FileNameDictionary.NormalizeFileName(entry.FileName);
-                    string outputFilePath = Path.Combine(outputPath, fileName);
-                    if (options.AutoExtractParam && fileName.EndsWith(".param")) {
-                        UnpackParamFile(new MemoryStream(entry.EntryData), fileName, outputFilePath);
-                        continue;
-                    }
-                    Directory.CreateDirectory(Path.GetDirectoryName(outputFilePath));
-                    File.WriteAllBytes(outputFilePath, entry.EntryData);
-                    bytesWritten += (ulong)entry.EntryData.Length;
-                } catch (Exception e) { }
+                    bytesWritten += ProcessFile(fileName, options, new MemoryStream(entry.EntryData));
+                } catch { }
             }
             return bytesWritten;
         }
 
+        /// <summary>
+        /// Unpacks a .sl2 file from disk and writes the unpacked user data to disk
+        /// </summary>
+        /// <param name="options"></param>
         private static void UnpackSl2File(Options options)
         {
             using (FileStream inputStream = new FileStream(options.InputPath, FileMode.Open, FileAccess.Read))
@@ -647,6 +727,9 @@ namespace BinderTool
             }
         }
 
+        /// <summary>
+        /// Gets the key used to encypt .sl2 save data for a given game
+        /// </summary>
         private static byte[] GetSavegameKey(GameVersion version)
         {
             byte[] key;
@@ -658,6 +741,9 @@ namespace BinderTool
                 case GameVersion.DarkSouls3:
                     key = DecryptionKeys.UserDataKeyDs3;
                     break;
+                case GameVersion.EldenRing:
+                    key = DecryptionKeys.UserDataKeyEr;
+                    break;
                 default:
                     key = new byte[16];
                     break;
@@ -666,6 +752,9 @@ namespace BinderTool
             return key;
         }
 
+        /// <summary>
+        /// Unpacks a regulation file from disk and writes the unpacked and decrypted files to disk
+        /// </summary>
         private static void UnpackRegulationFile(Options options)
         {
             using (FileStream inputStream = new FileStream(options.InputPath, FileMode.Open, FileAccess.Read))
@@ -673,10 +762,13 @@ namespace BinderTool
                 byte[] key = GetRegulationKey(options.InputGameVersion);
                 EncFile encryptedFile = EncFile.ReadEncFile(inputStream, key, options.InputGameVersion);
                 DcxFile compressedRegulationFile = DcxFile.Read(encryptedFile.Data);
-                UnpackBndFile(new MemoryStream(compressedRegulationFile.Decompress()), options.OutputPath, options);
+                UnpackBndFile(new MemoryStream(compressedRegulationFile.Decompress()), options);
             }
         }
 
+        /// <summary>
+        /// Gets the key used to encrypt the regulation file for the given game
+        /// </summary>
         private static byte[] GetRegulationKey(GameVersion version)
         {
             byte[] key;
@@ -688,9 +780,6 @@ namespace BinderTool
                 case GameVersion.DarkSouls3:
                     key = DecryptionKeys.RegulationFileKeyDs3;
                     break;
-                case GameVersion.EldenRing:
-                    key = DecryptionKeys.RegulationFileKeyEr;
-                    break;
                 default:
                     key = new byte[16];
                     break;
@@ -699,6 +788,9 @@ namespace BinderTool
             return key;
         }
 
+        /// <summary>
+        /// Decompresses a .dcx file from disk and writed the decompressed data to disk
+        /// </summary>
         private static void UnpackDcxFile(Options options)
         {
             string unpackedFileName = Path.GetFileNameWithoutExtension(options.InputPath);
@@ -712,7 +804,7 @@ namespace BinderTool
 
                 if (!hasExtension)
                 {
-                    string extension = GetDataExtension(new MemoryStream(decompressedData));
+                    string extension = GetDataExtension(new MemoryStream(decompressedData), options.InputGameVersion);
                     if (extension != ".dcx")
                     {
                         outputFilePath += extension;
@@ -723,6 +815,9 @@ namespace BinderTool
             }
         }
 
+        /// <summary>
+        /// Unpacks an unencrypted bdf4 file (.bdt) and writed the unpacked files to disk
+        /// </summary>
         private static void UnpackBdf4File(Options options)
         {
             string bdfDirectoryPath = Path.GetDirectoryName(options.InputPath);
@@ -764,6 +859,9 @@ namespace BinderTool
             }
         }
 
+        /// <summary>
+        /// Unpacks a .tpf file from disk and writes the unpacked files to disk
+        /// </summary>
         private static void UnpackTpfFile(Options options)
         {
             using (FileStream inputStream = new FileStream(options.InputPath, FileMode.Open, FileAccess.Read))
@@ -781,11 +879,17 @@ namespace BinderTool
             }
         }
 
+        /// <summary>
+        /// "Unpacks" an unencrypted bhf4 (.bhd) file (has no effect)
+        /// </summary>
         private static void UnpackBhf4File(Options options)
         {
             Console.WriteLine($"The file : \'{options.InputPath}\' is already decrypted.");
         }
 
+        /// <summary>
+        /// Decrypts an encrypted .bhd file from disk and returns the decrypted data
+        /// </summary>
         public static MemoryStream DecryptBhdFile(string filePath, GameVersion version)
         {
             string fileDirectory = Path.GetDirectoryName(filePath) ?? string.Empty;
@@ -816,6 +920,9 @@ namespace BinderTool
             return CryptographyUtility.DecryptRsa(filePath, key);
         }
 
+        /// <summary>
+        /// Unpacks a .param file from disk and writes the unpacked files to disk
+        /// </summary>
         private static ulong UnpackParamFile(Options options)
         {
             using (FileStream inputStream = new FileStream(options.InputPath, FileMode.Open, FileAccess.Read))
@@ -824,6 +931,12 @@ namespace BinderTool
             }
         }
 
+        /// <summary>
+        /// Unpacks a .param file from a given <code>stream</code> and writes the unpacked files to disk
+        /// </summary>
+        /// <param name="fileName">The name of the param file (used to find a .csv description of its format)</param>
+        /// <param name="outputPath">The path to write the result to</param>
+        /// <returns>The number of bytes written to disk</returns>
         private static ulong UnpackParamFile(Stream inputStream, string fileName, string outputPath)
         {
             ParamFile paramFile = ParamFile.ReadParamFile(inputStream);
@@ -894,6 +1007,9 @@ namespace BinderTool
             }
         }
 
+        /// <summary>
+        /// Unpacks a .fmg file from disk and writes the result to disk
+        /// </summary>
         private static void UnpackFmgFile(Options options)
         {
             using (FileStream inputStream = new FileStream(options.InputPath, FileMode.Open, FileAccess.Read))
@@ -902,6 +1018,9 @@ namespace BinderTool
             }
         }
 
+        /// <summary>
+        /// Unpacks a .fmg file from a given <code>Stream</code> an writes the result to disk
+        /// </summary>
         public static ulong UnpackFmgFile(Stream inputStream, string outputPath)
         {
             FmgFile fmgFile = FmgFile.ReadFmgFile(inputStream);
@@ -920,12 +1039,18 @@ namespace BinderTool
             return (ulong)new FileInfo(outputPath).Length;
         }
 
+        /// <summary>
+        /// Unpacks an enfl (.entryfilelist) file from disk and writes the result to disk
+        /// </summary>
         private static void UnpackEnflFile(Options options)
         {
             var ans = UnpackEnflFile(new FileStream(options.InputPath, FileMode.Open));
             File.WriteAllText(options.OutputPath + ".csv", ans);
         }
 
+        /// <summary>
+        /// Unpacks an enfl (.entryfilelist) file from a given <code>Stream</code> and writes the result to disk
+        /// </summary>
         private static string UnpackEnflFile(Stream input)
         {
             var f = EntryFileListFile.ReadEntryFileListFile(input);

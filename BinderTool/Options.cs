@@ -45,6 +45,12 @@ namespace BinderTool
         [Option("create-hash-list", Default = false, HelpText = "Outputs a file listing all filename hashes found in .bhd files in the input folder. Only works for Elden Ring.")]
         public bool CreateHashList { get; set; }
 
+        [Option("filename-search", Default = "", HelpText = "Searches for filenames. Intended for developer use.")]
+        public string FileNameSearch { get; set; }
+
+        [Option("only-output-unknown", Default = false, HelpText = "Only outputs files with an unknown name. Intended for developer use.")]
+        public bool OnlyOutputUnknown { get; set; }
+
         [Option('r', "recurse", Default = false, HelpText = "When using folder input, recurse to child folders")]
         public bool Recurse { get; set; }
 
@@ -61,6 +67,8 @@ namespace BinderTool
                 AutoExtractFmg = AutoExtractFmg,
                 AutoExtractEnfl = AutoExtractEnfl,
                 CollateEnflPath = CollateEnflPath,
+                CreateHashList = CreateHashList,
+                FileNameSearch = FileNameSearch,
                 Recurse = Recurse
             };
         }
@@ -122,6 +130,11 @@ namespace BinderTool
 
             if (fileName.EndsWith("enfl") || fileName.EndsWith("entryfilelist")) {
                 return (FileType.Enfl, GameVersion.Common);
+            }
+
+            //ER0000.sl2
+            if (Regex.IsMatch(fileName, @"^ER\d+.*\.sl2", RegexOptions.IgnoreCase)) {
+                return (FileType.Savegame, GameVersion.EldenRing);
             }
 
             // DS30000.sl2

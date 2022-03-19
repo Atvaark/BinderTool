@@ -12,19 +12,58 @@ using System.Threading.Tasks;
 
 namespace BinderTool
 {
+    /// <summary>
+    /// Code related to finding file names from their hashes. Currently only works for Elden Ring since it has 64-bit file hashes.
+    /// Static fields of type FileSearch are premade searches, which are accessed using reflection - it makes for cleaner looking code to do it this way instead of in a dictionary.
+    /// The way I made the searches was by browsing the "decompiled" code of the .exe in Ghidra and searching for strings containing the prefixes (e.g. "map:/").
+    /// In Elden Ring at least, these file name strings are in UTF-16 - not UTF-8. There's a lot of using format() with %s/%0d/%c. Usually the general format
+    /// of a %s can be recovered by browsing the nearby code. Due to the amount of virtual methods (methods in vtables), it's extremely difficult to recover
+    /// which numbers may be used in the format strings, so the code generally just searches through every number in the possible range.
+    /// </summary>
     public class FileSearch
     {
-        public string stub;
+        /// <summary>
+        /// Template string. For an enumerator of index <code>n</code>, every string of format <code>"{n}"</code> will be replaced with the value returned by the enumerator.
+        /// </summary>
+        public string template;
+        /// <summary>
+        /// Array of functions that return enumerators, which are then used to replace template placeholders in the template string.
+        /// </summary>
         public GetEnumerator[] enumerators;
+        /// <summary>
+        /// Array of integers representing the number of values each enumerator will contain. May be an estimate, since the value is only used for writing progress to the console. A value of <code>0</code> indicates that the <code>.Count()</code> method should be used to find the count (useful for small enumerators).
+        /// </summary>
         public ulong[] enumeratorLens;
+        /// <summary>
+        /// Array of functions that return enumerators, similar to <code>enumerators</code>. If null, indicates this field is not used and the search will be single-threaded. If non-null, each value of the array will be prepended to a copy of <code>enumerators</code> and a single-threaded search over the result will be run on a new thread.
+        /// </summary>
         public GetEnumerator[] firstLevel;
+        /// <summary>
+        /// Array of integers representing the number of values each enumerator in <code>firstLevel</code> will contain. May be null if <code>firstLevel</code> is null. Functions the same as <code>enumeratorLens</code>.
+        /// </summary>
         public ulong[] firstLevelLens;
+        /// <summary>
+        /// The prefix in the "hashable" file path that should be replaced with a filesystem root (e.g. "/map").
+        /// </summary>
         public string currPrefix;
+        /// <summary>
+        /// The prefix currPrefix will be replaced with (e.g. "map:/").
+        /// </summary>
         public string newPrefix;
 
-        public FileSearch(string stub, GetEnumerator[] enumerators, ulong[] enumeratorLens, string currPrefix, string newPrefix, GetEnumerator[] firstLevel, ulong[] firstLevelLens)
+        /// <summary>
+        /// Creates a FileSearch that may be parallel. If it's not parallel, firstLevel must be null.
+        /// </summary>
+        /// <param name="template">Template string. For an enumerator of index <code>n</code>, every string of format <code>"{n}"</code> will be replaced with the value returned by the enumerator.</param>
+        /// <param name="enumerators">Array of functions that return enumerators, which are then used to replace template placeholders in the template string.</param>
+        /// <param name="enumeratorLens">Array of integers representing the number of values each enumerator will contain. May be an estimate, since the value is only used for writing progress to the console. A value of <code>0</code> indicates that the <code>.Count()</code> method should be used to find the count (useful for small enumerators).</param>
+        /// <param name="currPrefix">The prefix in the "hashable" file path that should be replaced with a filesystem root (e.g. "/map").</param>
+        /// <param name="newPrefix">The prefix currPrefix will be replaced with (e.g. "map:/").</param>
+        /// <param name="firstLevel">Array of functions that return enumerators, similar to <code>enumerators</code>. If null, indicates this field is not used and the search will be single-threaded. If non-null, each value of the array will be prepended to a copy of <code>enumerators</code> and a single-threaded search over the result will be run on a new thread.</param>
+        /// <param name="firstLevelLens">Array of integers representing the number of values each enumerator in <code>firstLevel</code> will contain. May be null if <code>firstLevel</code> is null. Functions the same as <code>enumeratorLens</code>.</param>
+        public FileSearch(string template, GetEnumerator[] enumerators, ulong[] enumeratorLens, string currPrefix, string newPrefix, GetEnumerator[] firstLevel, ulong[] firstLevelLens)
         {
-            this.stub = stub;
+            this.template = template;
             this.firstLevel = firstLevel;
             this.firstLevelLens = firstLevelLens;
             this.currPrefix = currPrefix;
@@ -32,10 +71,28 @@ namespace BinderTool
             this.enumerators = enumerators;
             this.enumeratorLens = enumeratorLens;
         }
-        public FileSearch(string stub, GetEnumerator[] enumerators, ulong[] enumeratorLens, string currPrefix, string newPrefix) : this(stub, enumerators, enumeratorLens, currPrefix, newPrefix, null, null) {}
+        /// <summary>
+        /// Creates a non-parallel FileSearch.
+        /// </summary>
+        /// <param name="template">Template string. For an enumerator of index <code>n</code>, every string of format <code>"{n}"</code> will be replaced with the value returned by the enumerator.</param>
+        /// <param name="enumerators">Array of functions that return enumerators, which are then used to replace template placeholders in the template string.</param>
+        /// <param name="enumeratorLens">Array of integers representing the number of values each enumerator will contain. May be an estimate, since the value is only used for writing progress to the console. A value of <code>0</code> indicates that the <code>.Count()</code> method should be used to find the count (useful for small enumerators).</param>
+        /// <param name="currPrefix">The prefix in the "hashable" file path that should be replaced with a filesystem root (e.g. "/map")</param>
+        /// <param name="newPrefix">The prefix currPrefix will be replaced with (e.g. "map:/")</param>
+        public FileSearch(string template, GetEnumerator[] enumerators, ulong[] enumeratorLens, string currPrefix, string newPrefix) : this(template, enumerators, enumeratorLens, currPrefix, newPrefix, null, null) {}
 
+        /// <summary>
+        /// Utility type describing the generators for enumerators. We use a function that returns the enumerator instead of a static value
+        /// for a few reasons, primarily 1. so the enumerator can be repeatedly constructed since it ust be used for each value of the previous-level enumerator,
+        /// and 2. the operations involved in creating the enumerator may be expensive and include filesystem accesses which we want to do lazily.
+        /// </summary>
         public delegate IEnumerable<string> GetEnumerator();
 
+        /// <summary>
+        /// Top-level Search method - this is one of two methods code outside this file should need, the other being SearchAndUpdate.
+        /// This method handles single-threaded vs. parallel, progress output to the console, etc.
+        /// </summary>
+        /// <returns>A List containing file names whose hashes were in the provided HashSet</returns>
         public List<string> Search(HashSet<ulong> hashes)
         {
             if (firstLevel == null) {
@@ -50,13 +107,18 @@ namespace BinderTool
                     Console.WriteLine($"Searched {numDone}/{total} ({string.Format("{0:F2}", ((float)numDone / total * 100.0))}%)");
                 };
                 updateNumDone(0);
-                var ans = Search(hashes, stub, enumerators, updateNumDone);
+                var ans = Search(hashes, template, enumerators, updateNumDone);
                 updateNumDone(total);
                 return ans;
             } else {
-                return ParallelSearch(hashes, stub, firstLevel, firstLevelLens, enumerators, enumeratorLens);
+                return ParallelSearch(hashes, template, firstLevel, firstLevelLens, enumerators, enumeratorLens);
             }
         }
+        /// <summary>
+        /// Convenience method that runs FileSearch.Search and then UpdateDictionary with the results - this is one of two methods code outside this file should need, the other being Search. 
+        /// File names found that were not included in the dictionary are added to it, and the dictionary is re-written at savePath in code point (standard string sorting) order.
+        /// </summary>
+        /// <returns>A List containing file names whose hashes were in the provided HashSet</returns>
         public List<string> SearchAndUpdate(HashSet<ulong> hashes, string savePath)
         {
             var ans = this.Search(hashes);
@@ -64,7 +126,11 @@ namespace BinderTool
             return ans;
         }
 
-        public static List<string> ParallelSearch(HashSet<ulong> hashes, string stub, GetEnumerator[] firstLevel, ulong[] firstLevelLens, GetEnumerator[] rest, ulong[] enumeratorLens)
+        /// <summary>
+        /// Runs a parallel search with the given parameters.
+        /// </summary>
+        /// <returns>A List containing file names whose hashes were in the provided HashSet</returns>
+        private static List<string> ParallelSearch(HashSet<ulong> hashes, string template, GetEnumerator[] firstLevel, ulong[] firstLevelLens, GetEnumerator[] rest, ulong[] enumeratorLens)
         {
             List<string> ans = new List<string>();
             var tasks = new List<Task<List<string>>>();
@@ -94,7 +160,7 @@ namespace BinderTool
                 updateNumDone(0);
                 var cs = new TaskCompletionSource<List<String>>();
                 new Thread(() => {
-                    var ans2 = Search(new HashSet<ulong>(hashes), stub, gens.ToArray(), updateNumDone);
+                    var ans2 = Search(new HashSet<ulong>(hashes), template, gens.ToArray(), updateNumDone);
                     cs.SetResult(ans2);
                     updateNumDone(total);
                 }).Start();
@@ -109,11 +175,15 @@ namespace BinderTool
             return ans;
         }
 
-        public static List<string> Search(HashSet<ulong> hashes, string stub, GetEnumerator[] generators, Action<ulong> updateNumDone)
+        /// <summary>
+        /// Runs a single-threaded search with the given parameters.
+        /// </summary>
+        /// <returns>A List containing file names whose hashes were in the provided HashSet</returns>
+        private static List<string> Search(HashSet<ulong> hashes, string template, GetEnumerator[] generators, Action<ulong> updateNumDone)
         {
             List<string> ans = new List<string>();
             var stack = new List<(string, IEnumerable<string>, int)> {
-                (stub, generators[0](), 1)
+                (template, generators[0](), 1)
             };
             ulong numDone = 0;
             while (stack.Count > 0) {
@@ -137,96 +207,100 @@ namespace BinderTool
             return ans;
         }
 
+        /// <summary>
+        /// Utility method that creates a GetEnumerator over a range of integers formatted as 0-padded strings of a given length.
+        /// Extremely useful since there's a lot of 0-padded numbers in ER file names.
+        /// </summary>
         public static GetEnumerator Range0Padded(int start, int count, int length)
         {
             return () => Enumerable.Range(start, count).Select(i => string.Format($"{{0:D{length}}}", i));
         }
 
-        public static (string, GetEnumerator[]) data2MaphkxHkxbdtSearch = (
-            "/map/m{0}/m{0}_{1}_{2}_{3}/h{0}_{1}_{2}_{3}.hkxbdt",
+        public static FileSearch data2MaphkxHkxbdtSearch = new FileSearch(
+            "/map/m{1}/m{1}_{2}_{3}_{4}/{0}{1}_{2}_{3}_{4}.hkxbdt",
             new GetEnumerator[] {
+                () => new string[] { "h", "f", "l" },
                 Range0Padded(0, 100, 2),
                 Range0Padded(0, 100, 2),
                 Range0Padded(0, 100, 2),
                 Range0Padded(0, 100, 2)
-            }
+            },
+            new ulong[] {
+                100, 100, 100, 100
+            },
+            "/map",
+            "maphkx:"
         );
-        public static (string, GetEnumerator[]) data2MaphkxHkxbdtFSearch = (
-            "/map/m{0}/m{0}_{1}_{2}_{3}/f{0}_{1}_{2}_{3}.hkxbdt",
+        public static FileSearch data2MaphkxHkxbhdSearch = new FileSearch(
+            "{0}.hkxbhd",
             new GetEnumerator[] {
-                Range0Padded(0, 100, 2),
-                Range0Padded(0, 100, 2),
-                Range0Padded(0, 100, 2),
-                Range0Padded(0, 100, 2)
-            }
+                () => GetFilesHashable().Where(f => f.EndsWith(".hkxbdt")).Select(f => f.Replace(".hkxbdt", ".hkxbhd"))
+            },
+            new ulong[] {0},
+            "/map",
+            "maphkx:"
         );
-        public static (string, GetEnumerator[]) data2MaphkxHkxbdtLSearch = (
-            "/map/m{0}/m{0}_{1}_{2}_{3}/l{0}_{1}_{2}_{3}.hkxbdt",
-            new GetEnumerator[] {
-                Range0Padded(0, 100, 2),
-                Range0Padded(0, 100, 2),
-                Range0Padded(0, 100, 2),
-                Range0Padded(0, 100, 2)
-            }
-        );
-        public static (string, GetEnumerator[]) data2MapRelationinfobndSearch = (
+        public static FileSearch data2MapRelationinfobndSearch = new FileSearch(
             "/map/m{0}/m{0}_{1}_{2}_{3}/m{0}_{1}_{2}_{3}.relationinfobnd.dcx",
             new GetEnumerator[] {
                 Range0Padded(0, 100, 2),
                 Range0Padded(0, 100, 2),
                 Range0Padded(0, 100, 2),
                 Range0Padded(0, 100, 2)
-            }
+            },
+            new ulong[] {100, 100, 100, 100},
+            "/map",
+            "map:"
         );
-        public static (string, GetEnumerator[]) data2MapOnavSearch = (
+        public static FileSearch data2MapOnavSearch = new FileSearch(
             "/map/onav/m{0}_{1}_{2}_{3}.onav.dcx",
             new GetEnumerator[] {
                 Range0Padded(0, 100, 2),
                 Range0Padded(0, 100, 2),
                 Range0Padded(0, 100, 2),
                 Range0Padded(0, 100, 2)
-            }
+            },
+            new ulong[] { 100, 100, 100, 100 },
+            "/map/onav",
+            "onav:"
         );
-        public static (string, GetEnumerator[]) data2MapMsbSearch = (
+        public static FileSearch data2MapMsbSearch = new FileSearch(
             "/map/mapstudio/m{0}_{1}_{2}_{3}.msb.dcx",
             new GetEnumerator[] {
                 Range0Padded(0, 100, 2),
                 Range0Padded(0, 100, 2),
                 Range0Padded(0, 100, 2),
                 Range0Padded(0, 100, 2)
-            }
+            },
+            new ulong[] { 100, 100, 100, 100 },
+            "/map/mapstudio",
+            "mapstudio:"
         );
-        public static (string, GetEnumerator[]) data2MapMfrSearch = (
+        public static FileSearch data2MapMfrSearch = new FileSearch(
             "/map/m{0}/m{0}_{1}_{2}_{3}/m{0}_{1}_{2}_{3}.mfr.dcx",
             new GetEnumerator[] {
                 Range0Padded(0, 100, 2),
                 Range0Padded(0, 100, 2),
                 Range0Padded(0, 100, 2),
                 Range0Padded(0, 100, 2)
-            }
+            },
+            new ulong[] { 100, 100, 100, 100 },
+            "/map",
+            "map:"
         );
-        public static (string, GetEnumerator[]) data2MapNvaSearch = (
+        public static FileSearch data2MapNvaSearch = new FileSearch(
             "/map/m{0}/m{0}_{1}_{2}_{3}/m{0}_{1}_{2}_{3}.nva.dcx",
             new GetEnumerator[] {
                 Range0Padded(0, 100, 2),
                 Range0Padded(0, 100, 2),
                 Range0Padded(0, 100, 2),
                 Range0Padded(0, 100, 2)
-            }
+            },
+            new ulong[] { 100, 100, 100, 100 },
+            "/map",
+            "map:"
         );
-        public static (string, GetEnumerator[]) data2MapEnflSearch = (
-            "/map/entryfilelist/{0}.entryfilelist",
-            new GetEnumerator[] {
-                () => Enumerable.Range(0, 1000000000).Select(i => string.Format("e{0:D6}/e{1:D10}", i / 10000, i))
-            }
-        );
-        public static (string, GetEnumerator[]) data2MapiEnflSearch = (
-            "/map/entryfilelist/{0}.entryfilelist",
-            new GetEnumerator[] {
-               () => Enumerable.Range(0, 1000000000).Select(i => string.Format("e{0:D6}/i{1:D10}", i / 10000, i))
-            }
-        );
-        public static FileSearch data2MapiEnflSearchParallel = new FileSearch(
+        public static FileSearch data2MapiEnflSearch = new FileSearch(
             "/map/entryfilelist/{0}{1}.entryfilelist",
             new GetEnumerator[] {
                 () => Enumerable.Range(0, 10000).Select(i => string.Format("{0:D4}", i))
@@ -261,7 +335,7 @@ namespace BinderTool
                 100_000,
             }
         );
-        public static FileSearch data2MapEnflSearchParallel = new FileSearch(
+        public static FileSearch data2MapEnflSearch = new FileSearch(
             "/map/entryfilelist/{0}{1}.entryfilelist",
             new GetEnumerator[] {
                 () => Enumerable.Range(0, 10000).Select(i => string.Format("{0:D4}", i))
@@ -296,7 +370,7 @@ namespace BinderTool
                 100_000,
             }
         ); 
-        public static FileSearch data2MapEnflSearchParallelFast = new FileSearch(
+        public static FileSearch data2MapEnflSearchFast = new FileSearch(
              "/map/entryfilelist/{0}{1}.entryfilelist",
              new GetEnumerator[] {
                 () => Enumerable.Range(0, 10000).Select(i => string.Format("{0:D4}", i))
@@ -346,7 +420,7 @@ namespace BinderTool
                     100
                 },
                 "/map",
-                "map:/"
+                "map:"
             );
         public static FileSearch data2MapIvinfoSearch = new FileSearch(
                 "/map/{1}_{0}.ivinfobnd.dcx",
@@ -359,7 +433,7 @@ namespace BinderTool
                     1_00_00_00
                 },
                 "/map",
-                "map:/"
+                "map:"
             );
         public static FileSearch data2MapBtlSearch = new FileSearch(
                 "/map/{0}_{1}.btl.dcx",
@@ -372,7 +446,7 @@ namespace BinderTool
                     10000
                 },
                 "/map",
-                "map:/"
+                "map:"
             );
         public static FileSearch data2MapFvbSearch = new FileSearch(
                 "/map/{0}_{1}.fvb.dcx",
@@ -385,7 +459,7 @@ namespace BinderTool
                     10000
                 },
                 "/",
-                "map:/"
+                "map:"
             );
         public static FileSearch data2MapNvmhktbndSearch = new FileSearch(
                 "/map/{0}.nvmhktbnd.dcx",
@@ -396,7 +470,7 @@ namespace BinderTool
                     1_00_00_00
                 },
                 "/map",
-                "map:/"
+                "map:"
             );
         public static FileSearch data2MapMpwSearch = new FileSearch(
                 "/map/{0}.mpw.dcx",
@@ -407,7 +481,7 @@ namespace BinderTool
                     1_00_00_00
                 },
                 "/map",
-                "map:/"
+                "map:"
             );
         public static FileSearch data2MapFlverSearch = new FileSearch(
                 "/map/{0}.flver.dcx",
@@ -418,7 +492,7 @@ namespace BinderTool
                     1_00_00_00
                 },
                 "/map",
-                "map:/"
+                "map:"
             );
         public static FileSearch data2MapNvcSearch = new FileSearch(
                 "/map/nvc/{0}_{1}.nvc.dcx",
@@ -431,7 +505,7 @@ namespace BinderTool
                     1_00_00_00
                 },
                 "/map",
-                "map:/"
+                "map:"
             );
         public static FileSearch data2MapBreakgeomSearch = new FileSearch(
                 "/map/breakgeom/lod{0}/{1}_lod{0}.breakgeom.dcx",
@@ -443,8 +517,8 @@ namespace BinderTool
                     10,
                     1_00_00_00
                 },
-                "/map",
-                "map:/"
+                "/map/breakgeom",
+                "breakgeom:"
             );
         public static FileSearch data2MaptpfCommonSearch = new FileSearch(
                 "/map/{0}_CGrading.tpf.dcx",
@@ -455,7 +529,7 @@ namespace BinderTool
                     100
                 },
                 "/map",
-                "map:/"
+                "map:"
             );
         public static FileSearch data2MaptpfCommonSearch2 = new FileSearch(
                 "/map/{0}_{1}.tpf.dcx",
@@ -468,7 +542,7 @@ namespace BinderTool
                     10000
                 },
                 "/map",
-                "map:/"
+                "maptpf:"
             );
         public static FileSearch data0MapinfotexSearch = new FileSearch(
                 "/other/mapinfotex/{0}.mapinfotexbnd.dcx",
@@ -478,8 +552,8 @@ namespace BinderTool
                 new ulong[] {
                     1_00_00_00
                 },
-                "/",
-                "mapinfotex:/"
+                "/other/mapinfotex",
+                "mapinfotex:"
             );
         public static FileSearch data0OtherSearch = new FileSearch(
                 "/other/{0}",
@@ -505,8 +579,8 @@ namespace BinderTool
                 new ulong[] {
                     0
                 },
-                "/",
-                "other:/"
+                "/other",
+                "other:"
             );
         public static FileSearch data0MaterialSearch = new FileSearch(
                 "/material/{1}{0}",
@@ -521,8 +595,8 @@ namespace BinderTool
                 new ulong[] {
                     0, 0
                 },
-                "/",
-                "material:/"
+                "/material",
+                "material:"
             );
         public static FileSearch data0ShaderSearch = new FileSearch(
                 "/shader/{1}{0}",
@@ -572,7 +646,7 @@ namespace BinderTool
                 new ulong[] {
                     0, 0
                 },
-                "/font/",
+                "/font",
                 "font:/"
             );
         public static FileSearch data0ActionSearch = new FileSearch(
@@ -1411,38 +1485,33 @@ namespace BinderTool
                 "/",
                 ""
             );
+        /// <summary>
+        /// Returns an enumeration of the map names provided in ERMaps.csv
+        /// </summary>
         public static IEnumerable<string> GetMaps()
         {
             return File.ReadLines("ERMaps.csv");
         }
+        /// <summary>
+        /// Returns an enumeration over "hashable" (have the roots e.g. "map:/" replaced with their values e.g. "/map") file names contained in DictionaryER.csv
+        /// </summary>
         public static IEnumerable<string> GetFilesHashable()
         {
-            return File.ReadLines("DictionaryER.csv").Select(FileNameDictionary.MakeHashable);
+            return GetFiles().Select(FileNameDictionary.MakeHashable);
         }
+        /// <summary>
+        /// Returns an enumeration over the file names contained in DictionaryER.csv. 
+        /// Note that if these are hashed, they will not match up with the hashes in .bhd files since they are stored with root aliases (e.g. "map:/") which are not used in the .bhd hashes.
+        /// </summary>
         public static IEnumerable<string> GetFiles()
         {
             return File.ReadLines("DictionaryER.csv");
         }
-        public static (string, GetEnumerator[]) data2MapMapbndSearch(string extractedFolderPath)
-        {
-            List<string> maps = new List<string>();
-            foreach (var folder1 in Directory.GetDirectories(extractedFolderPath)) {
-                foreach (var folder2 in Directory.GetDirectories(folder1)) {
-                    var dir = Path.GetFileName(folder2);
-                    if (Regex.IsMatch(dir, @"m\d\d_\d\d_\d\d_\d\d_\d\d\d\d\d\d")) maps.Add(dir);
-                    else if (Regex.IsMatch(dir, @"m\d\d_\d\d_\d\d_\d\d")) {
-                        foreach (var folder3 in Directory.GetDirectories(folder2)) {
-                            var dir2 = Path.GetFileName(folder3);
-                            if (Regex.IsMatch(dir2, @"m\d\d_\d\d_\d\d_\d\d_\d\d\d\d\d\d")) maps.Add(dir2);
-                        }
-                    }
-                }
-            }
-            return (
-                "/map/{0}.mapbnd.dcx",
-                new GetEnumerator[] { () => maps.Select(s => s.Substring(0, 3) + "/" + s.Substring(0, 12) + "/" + s) }
-            );
-        }
+
+        /// <summary>
+        /// Creates a list of map names (all strings of format "mXX_XX_XX_XX" where Xs may be any number) in the current DictionaryER.csv.
+        /// The list is written to <code>outputPath</code>.
+        /// </summary>
         public static void CreateMapList(string outputPath)
         {
             var lines = File.ReadAllLines("DictionaryER.csv");
@@ -1455,6 +1524,14 @@ namespace BinderTool
             Array.Sort(ans);
             File.WriteAllLines(outputPath, ans);
         }
+        /// <summary>
+        /// Creates a binary .hashlist file which lists all file name hashes in the given .bhd files.
+        /// The .hashlist file is a single u64 length which gives the number of hashes, followed by those hashes in binary u64 format.
+        /// The .hashlist file is used because it's much faster than decrypting and parsing one or more .bhd files every time you want to run a file search.
+        /// </summary>
+        /// <param name="outputPath">The location to write the .hashlist</param>
+        /// <param name="bhds">A list of .bhd file paths to read hashes from</param>
+        /// <returns>The number of unique hashes</returns>
         public static int CreateHashList(string outputPath, params string[] bhds)
         {
             HashSet<ulong> hashes = new HashSet<ulong>();
@@ -1478,6 +1555,12 @@ namespace BinderTool
             output.Close();
             return hashes.Count;
         }
+
+        /// <summary>
+        /// Reads a .hashlist (presumably created by <code>CreateHashList</code>) into a HashSet.
+        /// </summary>
+        /// <param name="filename">The path to the .hashlist</param>
+        /// <returns>A HashSet containing all the hashes from the .hashlist</returns>
         public static HashSet<ulong> ReadHashList(string filename)
         {
             var ans = new HashSet<ulong>();
@@ -1489,6 +1572,13 @@ namespace BinderTool
             }
             return ans;
         }
+        /// <summary>
+        /// Updates DictionaryER.csv with newly found hashes. The dictionary will be sorted by code point (default string sort) and duplicate entries will be removed.
+        /// </summary>
+        /// <param name="newFiles">The list of new file names (may contain names already in the dictionary)</param>
+        /// <param name="currPrefix">The path prefix to be replaced (e.g. "/map")</param>
+        /// <param name="newPrefix">The alias path to replace <code>currPrefix</code> with (e.g. "map:")</param>
+        /// <param name="savePath">The location to write the new dictionary to</param>
         public static void UpdateDictionary(IEnumerable<string> newFiles, string currPrefix, string newPrefix, string savePath)
         {
             var lines = File.ReadAllLines("DictionaryER.csv");
