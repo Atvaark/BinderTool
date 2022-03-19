@@ -14,35 +14,108 @@ namespace BinderTool
 {
     public class FileSearch
     {
+        public string stub;
+        public GetEnumerator[] enumerators;
+        public ulong[] enumeratorLens;
+        public GetEnumerator[] firstLevel;
+        public ulong[] firstLevelLens;
+        public string currPrefix;
+        public string newPrefix;
+
+        public FileSearch(string stub, GetEnumerator[] enumerators, ulong[] enumeratorLens, string currPrefix, string newPrefix, GetEnumerator[] firstLevel, ulong[] firstLevelLens)
+        {
+            this.stub = stub;
+            this.firstLevel = firstLevel;
+            this.firstLevelLens = firstLevelLens;
+            this.currPrefix = currPrefix;
+            this.newPrefix = newPrefix;
+            this.enumerators = enumerators;
+            this.enumeratorLens = enumeratorLens;
+        }
+        public FileSearch(string stub, GetEnumerator[] enumerators, ulong[] enumeratorLens, string currPrefix, string newPrefix) : this(stub, enumerators, enumeratorLens, currPrefix, newPrefix, null, null) {}
+
         public delegate IEnumerable<string> GetEnumerator();
 
-        public static List<string> ParallelSearch(HashSet<ulong> hashes, string stub, GetEnumerator[] firstLevel, GetEnumerator[] rest)
+        public List<string> Search(HashSet<ulong> hashes)
+        {
+            if (firstLevel == null) {
+                ulong total = 1;
+                for (int i = 0; i < enumerators.Length; i++) {
+                    if (enumeratorLens[i] == 0) total *= (ulong)enumerators[i]().Count();
+                    else total *= enumeratorLens[i];
+                }
+                var pos = (Console.CursorLeft, Console.CursorTop);
+                Action<ulong> updateNumDone = (numDone) => {
+                    Console.SetCursorPosition(pos.CursorLeft, pos.CursorTop);
+                    Console.WriteLine($"Searched {numDone}/{total} ({string.Format("{0:F2}", ((float)numDone / total * 100.0))}%)");
+                };
+                updateNumDone(0);
+                var ans = Search(hashes, stub, enumerators, updateNumDone);
+                updateNumDone(total);
+                return ans;
+            } else {
+                return ParallelSearch(hashes, stub, firstLevel, firstLevelLens, enumerators, enumeratorLens);
+            }
+        }
+        public List<string> SearchAndUpdate(HashSet<ulong> hashes, string savePath)
+        {
+            var ans = this.Search(hashes);
+            UpdateDictionary(ans, currPrefix, newPrefix, savePath);
+            return ans;
+        }
+
+        public static List<string> ParallelSearch(HashSet<ulong> hashes, string stub, GetEnumerator[] firstLevel, ulong[] firstLevelLens, GetEnumerator[] rest, ulong[] enumeratorLens)
         {
             List<string> ans = new List<string>();
             var tasks = new List<Task<List<string>>>();
-            foreach (var gen in firstLevel) {
+            var consoleMutex = new Mutex();
+            var threadInd = 0;
+            int left = Console.CursorLeft;
+            int topStart = Console.CursorTop;
+            for (int genInd = 0; genInd < firstLevel.Length; genInd++) {
+                var gen = firstLevel[genInd];
                 List<GetEnumerator> gens = new List<GetEnumerator>() { gen };
                 gens.AddRange(rest);
+                ulong total = firstLevelLens[genInd];
+                if (total == 0) total = (ulong)gen().Count();
+                for (int i = 0; i < rest.Length; i++) {
+                    if (enumeratorLens[i] == 0) total *= (ulong)rest[i]().Count();
+                    else total *= enumeratorLens[i];
+                }
+                int top = topStart + threadInd;
+                var currInd = threadInd;
+                threadInd++;
+                Action<ulong> updateNumDone = (numDone) => {
+                    consoleMutex.WaitOne();
+                    Console.SetCursorPosition(left, top);
+                    Console.WriteLine($"Thread {currInd} searched {numDone}/{total} ({(int)Math.Round((float)numDone / total * 100.0)}%)");
+                    consoleMutex.ReleaseMutex();
+                };
+                updateNumDone(0);
                 var cs = new TaskCompletionSource<List<String>>();
                 new Thread(() => {
-                    var ans2 = Search(hashes, stub, gens.ToArray());
+                    var ans2 = Search(new HashSet<ulong>(hashes), stub, gens.ToArray(), updateNumDone);
                     cs.SetResult(ans2);
+                    updateNumDone(total);
                 }).Start();
                 tasks.Add(cs.Task);
             }
             Task.WaitAll(tasks.ToArray());
+            Console.SetCursorPosition(left, topStart + threadInd);
+            Console.WriteLine("All threads finished");
             foreach (var task in tasks) {
                 ans.AddRange(task.Result);
             }
             return ans;
         }
 
-        public static List<string> Search(HashSet<ulong> hashes, string stub, GetEnumerator[] generators)
+        public static List<string> Search(HashSet<ulong> hashes, string stub, GetEnumerator[] generators, Action<ulong> updateNumDone)
         {
             List<string> ans = new List<string>();
             var stack = new List<(string, IEnumerable<string>, int)> {
                 (stub, generators[0](), 1)
             };
+            ulong numDone = 0;
             while (stack.Count > 0) {
                 var (soFar, gen, ind) = stack.Last();
                 stack.RemoveAt(stack.Count - 1);
@@ -52,6 +125,8 @@ namespace BinderTool
                     if (nextGen != null) stack.Add((next, nextGen(), ind + 1));
                     else {
                         var hash = FileNameDictionary.GetHashCodeLong(next);
+                        numDone++;
+                        if (numDone % 100_000 == 0) updateNumDone(numDone);
                         if (hashes.Contains(hash)) {
                             ans.Add(next);
                             Debug.WriteLine($"{hash} {next}");
@@ -144,15 +219,23 @@ namespace BinderTool
             new GetEnumerator[] {
                 () => Enumerable.Range(0, 1000000000).Select(i => string.Format("e{0:D6}/e{1:D10}", i / 10000, i))
             }
-        ); 
+        );
         public static (string, GetEnumerator[]) data2MapiEnflSearch = (
             "/map/entryfilelist/{0}.entryfilelist",
             new GetEnumerator[] {
                () => Enumerable.Range(0, 1000000000).Select(i => string.Format("e{0:D6}/i{1:D10}", i / 10000, i))
             }
         );
-        public static (string, GetEnumerator[], GetEnumerator[]) data2MapiEnflSearchParallel = (
+        public static FileSearch data2MapiEnflSearchParallel = new FileSearch(
             "/map/entryfilelist/{0}{1}.entryfilelist",
+            new GetEnumerator[] {
+                () => Enumerable.Range(0, 10000).Select(i => string.Format("{0:D4}", i))
+            },
+            new ulong[] {
+                10_000
+            },
+            "/map/entryfilelist",
+            "entryfilelist:",
             new GetEnumerator[] {
                 () => Enumerable.Range(0, 100000).Select(i => string.Format("e{0:D6}/i{0:D6}", i)),
                 () => Enumerable.Range(100000, 100000).Select(i => string.Format("e{0:D6}/i{0:D6}", i)),
@@ -165,12 +248,29 @@ namespace BinderTool
                 () => Enumerable.Range(800000, 100000).Select(i => string.Format("e{0:D6}/i{0:D6}", i)),
                 () => Enumerable.Range(900000, 100000).Select(i => string.Format("e{0:D6}/i{0:D6}", i)),
             },
-            new GetEnumerator[] {
-                () => Enumerable.Range(0, 10000).Select(i => string.Format("{0:D4}", i))
+            new ulong[] {
+                100_000,
+                100_000,
+                100_000,
+                100_000,
+                100_000,
+                100_000,
+                100_000,
+                100_000,
+                100_000,
+                100_000,
             }
         );
-        public static (string, GetEnumerator[], GetEnumerator[]) data2MapeEnflSearchParallel = (
+        public static FileSearch data2MapEnflSearchParallel = new FileSearch(
             "/map/entryfilelist/{0}{1}.entryfilelist",
+            new GetEnumerator[] {
+                () => Enumerable.Range(0, 10000).Select(i => string.Format("{0:D4}", i))
+            },
+            new ulong[] {
+                10_000
+            },
+            "/map/entryfilelist",
+            "entryfilelist:",
             new GetEnumerator[] {
                 () => Enumerable.Range(0, 100000).Select(i => string.Format("e{0:D6}/e{0:D6}", i)),
                 () => Enumerable.Range(100000, 100000).Select(i => string.Format("e{0:D6}/e{0:D6}", i)),
@@ -183,11 +283,55 @@ namespace BinderTool
                 () => Enumerable.Range(800000, 100000).Select(i => string.Format("e{0:D6}/e{0:D6}", i)),
                 () => Enumerable.Range(900000, 100000).Select(i => string.Format("e{0:D6}/e{0:D6}", i)),
             },
-            new GetEnumerator[] {
-                () => Enumerable.Range(0, 10000).Select(i => string.Format("{0:D4}", i))
+            new ulong[] {
+                100_000,
+                100_000,
+                100_000,
+                100_000,
+                100_000,
+                100_000,
+                100_000,
+                100_000,
+                100_000,
+                100_000,
             }
-        );
-        public static (string, GetEnumerator[], string, string) data2MapEnvmapSearch = (
+        ); 
+        public static FileSearch data2MapEnflSearchParallelFast = new FileSearch(
+             "/map/entryfilelist/{0}{1}.entryfilelist",
+             new GetEnumerator[] {
+                () => Enumerable.Range(0, 10000).Select(i => string.Format("{0:D4}", i))
+             },
+             new ulong[] {
+                10_000
+             },
+             "/map/entryfilelist",
+             "entryfilelist:",
+             new GetEnumerator[] {
+                () => Enumerable.Range(0, 20000).Select(i => string.Format("e{0:D6}/e{0:D6}", i)),
+                () => Enumerable.Range(20000, 20000).Select(i => string.Format("e{0:D6}/e{0:D6}", i)),
+                () => Enumerable.Range(40000, 20000).Select(i => string.Format("e{0:D6}/e{0:D6}", i)),
+                () => Enumerable.Range(60000, 20000).Select(i => string.Format("e{0:D6}/e{0:D6}", i)),
+                () => Enumerable.Range(80000, 20000).Select(i => string.Format("e{0:D6}/e{0:D6}", i)),
+                () => Enumerable.Range(100000, 20000).Select(i => string.Format("e{0:D6}/e{0:D6}", i)),
+                () => Enumerable.Range(120000, 20000).Select(i => string.Format("e{0:D6}/e{0:D6}", i)),
+                () => Enumerable.Range(140000, 20000).Select(i => string.Format("e{0:D6}/e{0:D6}", i)),
+                () => Enumerable.Range(160000, 20000).Select(i => string.Format("e{0:D6}/e{0:D6}", i)),
+                () => Enumerable.Range(180000, 20000).Select(i => string.Format("e{0:D6}/e{0:D6}", i)),
+             },
+             new ulong[] {
+                20_000,
+                20_000,
+                20_000,
+                20_000,
+                20_000,
+                20_000,
+                20_000,
+                20_000,
+                20_000,
+                20_000,
+             }
+         );
+        public static FileSearch data2MapEnvmapSearch = new FileSearch(
                 "/map/{0}_envmap_{1}_{2}_{3}.tpfbnd.dcx",
                 new GetEnumerator[] {
                     () => GetMaps().Select(s => s.Substring(0, 3) + "/" + s.Substring(0, 12) + "/" + s.Substring(0, 12)),
@@ -195,107 +339,152 @@ namespace BinderTool
                     () => new string[] {"low", "middle", "high"},
                     Range0Padded(0, 100, 2)
                 },
+                new ulong[] {
+                    1_00_00_00,
+                    100,
+                    3,
+                    100
+                },
                 "/map",
                 "map:/"
             );
-        public static (string, GetEnumerator[], string, string) data2MapIvinfoSearch = (
+        public static FileSearch data2MapIvinfoSearch = new FileSearch(
                 "/map/{1}_{0}.ivinfobnd.dcx",
                 new GetEnumerator[] {
                     () => new string[] {"low", "middle", "high"},
                     () => GetMaps().Select(s => s.Substring(0, 3) + "/" + s.Substring(0, 12) + "/" + s.Substring(0, 12)),
                 },
+                new ulong[] {
+                    100,
+                    1_00_00_00
+                },
                 "/map",
                 "map:/"
             );
-        public static (string, GetEnumerator[], string, string) data2MapBtlSearch = (
+        public static FileSearch data2MapBtlSearch = new FileSearch(
                 "/map/{0}_{1}.btl.dcx",
                 new GetEnumerator[] {
                     () => GetMaps().Select(s => s.Substring(0, 3) + "/" + s.Substring(0, 12) + "/" + s.Substring(0, 12)),
                     Range0Padded(0, 10000, 4),
                 },
+                new ulong[] {
+                    1_00_00_00,
+                    10000
+                },
                 "/map",
                 "map:/"
             );
-        public static (string, GetEnumerator[], string, string) data2MapFvbSearch = (
+        public static FileSearch data2MapFvbSearch = new FileSearch(
                 "/map/{0}_{1}.fvb.dcx",
                 new GetEnumerator[] {
                     () => GetMaps().Select(s => s.Substring(0, 3) + "/" + s.Substring(0, 12) + "/" + s.Substring(0, 12)),
                     Range0Padded(0, 10000, 4),
                 },
+                new ulong[] {
+                    1_00_00_00,
+                    10000
+                },
                 "/",
                 "map:/"
             );
-        public static (string, GetEnumerator[], string, string) data2MapNvmhktbndSearch = (
+        public static FileSearch data2MapNvmhktbndSearch = new FileSearch(
                 "/map/{0}.nvmhktbnd.dcx",
                 new GetEnumerator[] {
                     () => GetMaps().Select(s => s.Substring(0, 3) + "/" + s.Substring(0, 12) + "/" + s.Substring(0, 12)),
                 },
+                new ulong[] {
+                    1_00_00_00
+                },
                 "/map",
                 "map:/"
             );
-        public static (string, GetEnumerator[], string, string) data2MapMpwSearch = (
+        public static FileSearch data2MapMpwSearch = new FileSearch(
                 "/map/{0}.mpw.dcx",
                 new GetEnumerator[] {
                     () => GetMaps().Select(s => s.Substring(0, 3) + "/" + s.Substring(0, 12) + "/" + s.Substring(0, 12)),
                 },
-                "/map",
-                "map:/"
-            );
-        public static (string, GetEnumerator[], string, string) data2MapFlverSearch = (
-                "/map/{0}.flver.dcx",
-                new GetEnumerator[] {
-                    () => GetMaps().Select(s => s.Substring(0, 3) + "/" + s.Substring(0, 12) + "/" + s.Substring(0, 12)),
+                new ulong[] {
+                    1_00_00_00
                 },
                 "/map",
                 "map:/"
             );
-        public static (string, GetEnumerator[], string, string) data2MapNvcSearch = (
+        public static FileSearch data2MapFlverSearch = new FileSearch(
+                "/map/{0}.flver.dcx",
+                new GetEnumerator[] {
+                    () => GetMaps().Select(s => s.Substring(0, 3) + "/" + s.Substring(0, 12) + "/" + s.Substring(0, 12)),
+                },
+                new ulong[] {
+                    1_00_00_00
+                },
+                "/map",
+                "map:/"
+            );
+        public static FileSearch data2MapNvcSearch = new FileSearch(
                 "/map/nvc/{0}_{1}.nvc.dcx",
                 new GetEnumerator[] {
                     () => GetMaps(),
                     () => GetMaps(),
                 },
+                new ulong[] {
+                    1_00_00_00,
+                    1_00_00_00
+                },
                 "/map",
                 "map:/"
             );
-        public static (string, GetEnumerator[], string, string) data2MapBreakgeomSearch = (
+        public static FileSearch data2MapBreakgeomSearch = new FileSearch(
                 "/map/breakgeom/lod{0}/{1}_lod{0}.breakgeom.dcx",
                 new GetEnumerator[] {
                     Range0Padded(0, 10, 1),
                     () => GetMaps(),
                 },
-                "/map",
-                "map:/"
-            );
-        public static (string, GetEnumerator[], string, string) data2MaptpfCommonSearch = (
-                "/map/{0}_CGrading.tpf.dcx",
-                new GetEnumerator[] {
-                    () => Enumerable.Range(0, 100).Select(i => string.Format("m{0:D2}", i)).Select(s => $"{s}/Common/{s}")
+                new ulong[] {
+                    10,
+                    1_00_00_00
                 },
                 "/map",
                 "map:/"
             );
-        public static (string, GetEnumerator[], string, string) data2MaptpfCommonSearch2 = (
+        public static FileSearch data2MaptpfCommonSearch = new FileSearch(
+                "/map/{0}_CGrading.tpf.dcx",
+                new GetEnumerator[] {
+                    () => Enumerable.Range(0, 100).Select(i => string.Format("m{0:D2}", i)).Select(s => $"{s}/Common/{s}")
+                },
+                new ulong[] {
+                    100
+                },
+                "/map",
+                "map:/"
+            );
+        public static FileSearch data2MaptpfCommonSearch2 = new FileSearch(
                 "/map/{0}_{1}.tpf.dcx",
                 new GetEnumerator[] {
                     () => Enumerable.Range(0, 100).Select(i => string.Format("m{0:D2}", i)).Select(s => $"{s}/Common/{s}"),
                     () => Enumerable.Range(0, 10000).Select(i => string.Format("m{0:D4}", i))
                 },
+                new ulong[] {
+                    100,
+                    10000
+                },
                 "/map",
                 "map:/"
             );
-        public static (string, GetEnumerator[], string, string) data0MapinfotexSearch = (
+        public static FileSearch data0MapinfotexSearch = new FileSearch(
                 "/other/mapinfotex/{0}.mapinfotexbnd.dcx",
                 new GetEnumerator[] {
                     () => GetMaps(),
                 },
+                new ulong[] {
+                    1_00_00_00
+                },
                 "/",
                 "mapinfotex:/"
             );
-        public static (string, GetEnumerator[], string, string) data0OtherSearch = (
+        public static FileSearch data0OtherSearch = new FileSearch(
                 "/other/{0}",
                 new GetEnumerator[] {
-                    () => new string[] { 
+                    () => new string[] {
                         "InGameStay.loadlist",
                         "InGameStay.loadlist.dcx",
                         "network/server_public_key",
@@ -313,10 +502,13 @@ namespace BinderTool
                         "MovTae.movtae.dcx",
                     }
                 },
+                new ulong[] {
+                    0
+                },
                 "/",
                 "other:/"
             );
-        public static (string, GetEnumerator[], string, string) data0MaterialSearch = (
+        public static FileSearch data0MaterialSearch = new FileSearch(
                 "/material/{1}{0}",
                 new GetEnumerator[] {
                     () => new string[] {"", ".dcx"},
@@ -326,10 +518,13 @@ namespace BinderTool
                         "SpeedTree.matbinbnd"
                     }
                 },
+                new ulong[] {
+                    0, 0
+                },
                 "/",
                 "material:/"
             );
-        public static (string, GetEnumerator[], string, string) data0ShaderSearch = (
+        public static FileSearch data0ShaderSearch = new FileSearch(
                 "/shader/{1}{0}",
                 new GetEnumerator[] {
                     () => new string[] {"", ".dcx"},
@@ -351,10 +546,13 @@ namespace BinderTool
                         "SpeedTree_[RT].shaderbdlebnd"
                     }
                 },
+                new ulong[] {
+                    0, 0
+                },
                 "/shader",
                 "shader:"
             );
-        public static (string, GetEnumerator[], string, string) data0FontSearch = (
+        public static FileSearch data0FontSearch = new FileSearch(
                 "/font/{1}/font.gfx{0}",
                 new GetEnumerator[] {
                     () => new string[] {"", ".dcx"},
@@ -371,10 +569,13 @@ namespace BinderTool
                         "Hangul_Map"
                     }
                 },
+                new ulong[] {
+                    0, 0
+                },
                 "/font/",
                 "font:/"
             );
-        public static (string, GetEnumerator[], string, string) data0ActionSearch = (
+        public static FileSearch data0ActionSearch = new FileSearch(
                 "/action/{1}{0}",
                 new GetEnumerator[] {
                     () => new string[] {"", ".dcx"},
@@ -388,19 +589,25 @@ namespace BinderTool
                         "script/c0000_talk.hks"
                     }
                 },
+                new ulong[] {
+                    0, 0
+                },
                 "/action",
                 "action:"
             );
-        public static (string, GetEnumerator[], string, string) data0ActscriptSearch = (
+        public static FileSearch data0ActscriptSearch = new FileSearch(
                 "/action/script/c{1}.hks{0}",
                 new GetEnumerator[] {
                     () => new string[] {"", ".dcx"},
                     Range0Padded(0, 10_000, 4)
                 },
+                new ulong[] {
+                    0, 10_000
+                },
                 "/action/script",
                 "actscript:"
             );
-        public static (string, GetEnumerator[], string, string) data0TalkscriptSearch = (
+        public static FileSearch data0TalkscriptSearch = new FileSearch(
                 "/script/talk/m{0}_{1}_{2}_{3}.talkesdbnd.dcx",
                 new GetEnumerator[] {
                     Range0Padded(0, 100, 2),
@@ -408,10 +615,13 @@ namespace BinderTool
                     Range0Padded(0, 100, 2),
                     Range0Padded(0, 100, 2)
                 },
+                new ulong[] {
+                    100, 100, 100, 100
+                },
                 "/script/talk",
                 "talkscript:"
             );
-        public static (string, GetEnumerator[], string, string) data0AiscriptSearch = (
+        public static FileSearch data0AiscriptSearch = new FileSearch(
                 "/script/m{0}_{1}_{2}_{3}.luabnd.dcx",
                 new GetEnumerator[] {
                     Range0Padded(0, 100, 2),
@@ -419,19 +629,25 @@ namespace BinderTool
                     Range0Padded(0, 100, 2),
                     Range0Padded(0, 100, 2)
                 },
+                new ulong[] {
+                    100, 100, 100, 100
+                },
                 "/script",
                 "aiscript:"
             );
-        public static (string, GetEnumerator[], string, string) data0AiscriptSearch2 = (
+        public static FileSearch data0AiscriptSearch2 = new FileSearch(
                 "/script/{1}_{0}.luabnd.dcx",
                 new GetEnumerator[] {
                     () => new string[] {"logic", "battle"},
                     Range0Padded(0, 1000000, 6),
                 },
+                new ulong[] {
+                    1_000_000
+                },
                 "/script",
                 "aiscript:"
             );
-        public static (string, GetEnumerator[], string, string) data0MsgSearch = (
+        public static FileSearch data0MsgSearch = new FileSearch(
                 "/msg/{1}/{0}.msgbnd.dcx",
                 new GetEnumerator[] {
                     () => new string[] {"item", "menu", "ngword", "sellregion"},
@@ -441,22 +657,28 @@ namespace BinderTool
                         "NA", "EU", "AS", "UK"
                     }
                 },
+                new ulong[] {
+                    0, 0
+                },
                 "/msg",
                 "msg:"
             );
-        public static (string, GetEnumerator[], string, string) data0ParamSearch = (
+        public static FileSearch data0ParamSearch = new FileSearch(
                 "/param/{0}.parambnd.dcx",
                 new GetEnumerator[] {
                     () => new string[] {
-                        "systemparam/systemparam", 
-                        "GameParam/GameParam", 
+                        "systemparam/systemparam",
+                        "GameParam/GameParam",
                         "EventParam/EventParam"
                     }
+                },
+                new ulong[] {
+                    0
                 },
                 "/param",
                 "param:"
             );
-        public static (string, GetEnumerator[], string, string) data0GparamSearch = (
+        public static FileSearch data0GparamSearch = new FileSearch(
                 "/param/drawparam/{1}.gparam{0}",
                 new GetEnumerator[] {
                     () => new string[] {"", ".dcx"},
@@ -477,20 +699,26 @@ namespace BinderTool
                         "IvInfo"
                     }
                 },
+                new ulong[] {
+                    0, 0
+                },
                 "/param/drawparam",
                 "gparam:"
             );
-        public static (string, GetEnumerator[], string, string) data0GparamSearch2 = (
+        public static FileSearch data0GparamSearch2 = new FileSearch(
                 "/param/drawparam/s{0}_{1}_{2}.gparam.dcx",
                 new GetEnumerator[] {
                     Range0Padded(0, 100, 2),
                     Range0Padded(0, 100, 2),
                     Range0Padded(0, 10000, 4)
                 },
+                new ulong[] {
+                    100, 100, 10_000
+                },
                 "/param/drawparam",
                 "gparam:"
             );
-        public static (string, GetEnumerator[], string, string) data0GparamSearch3 = (
+        public static FileSearch data0GparamSearch3 = new FileSearch(
                 "/param/drawparam/m{1}_{2}_{3}{0}.gparam.dcx",
                 new GetEnumerator[] {
                     () => new string[] {"", "_WeatherBase", "_WeatherOutdoor", "_CommonEvent", "_CommonEventMapUnique"},
@@ -498,10 +726,13 @@ namespace BinderTool
                     Range0Padded(0, 100, 2),
                     Range0Padded(0, 10000, 4)
                 },
+                new ulong[] {
+                    100, 100, 10_000
+                },
                 "/param/drawparam",
                 "gparam:"
             );
-        public static (string, GetEnumerator[], string, string) data0GparamSearch4 = (
+        public static FileSearch data0GparamSearch4 = new FileSearch(
                 "/param/drawparam/s{0}_{1}_{2}_WeatherOverride_{3}.gparam.dcx",
                 new GetEnumerator[] {
                     Range0Padded(0, 100, 2),
@@ -509,10 +740,13 @@ namespace BinderTool
                     Range0Padded(0, 10000, 4),
                     Range0Padded(0, 100, 2)
                 },
+                new ulong[] {
+                    100, 100, 10_000, 100
+                },
                 "/param/drawparam",
                 "gparam:"
             );
-        public static (string, GetEnumerator[], string, string) data0EventSearch = (
+        public static FileSearch data0EventSearch = new FileSearch(
                 "/event/{1}{0}",
                 new GetEnumerator[] {
                     () => new string[] {"", ".dcx"},
@@ -523,10 +757,13 @@ namespace BinderTool
                         "common.emevd"
                     }
                 },
+                new ulong[] {
+                    0, 0
+                },
                 "/event",
                 "event:"
             );
-        public static (string, GetEnumerator[], string, string) data0EventSearch2 = (
+        public static FileSearch data0EventSearch2 = new FileSearch(
                 "/event/m{0}_{1}_{2}_{3}.emevd.dcx",
                 new GetEnumerator[] {
                     Range0Padded(0, 100, 2),
@@ -534,18 +771,24 @@ namespace BinderTool
                     Range0Padded(0, 100, 2),
                     Range0Padded(0, 100, 2)
                 },
-                "/event",
-                "event:"
-            );
-        public static (string, GetEnumerator[], string, string) data0EventSearch3 = (
-                "/event/m{0}.emevd.dcx",
-                new GetEnumerator[] {
-                    Range0Padded(0, 100, 2)
+                new ulong[] {
+                    100, 100, 100, 100
                 },
                 "/event",
                 "event:"
             );
-        public static (string, GetEnumerator[], string, string) data0MenuSearch = (
+        public static FileSearch data0EventSearch3 = new FileSearch(
+                "/event/m{0}.emevd.dcx",
+                new GetEnumerator[] {
+                    Range0Padded(0, 100, 2)
+                },
+                new ulong[] {
+                    100
+                },
+                "/event",
+                "event:"
+            );
+        public static FileSearch data0MenuSearch = new FileSearch(
                 "/menu/{1}{0}",
                 new GetEnumerator[] {
                     () => new string[] {"", ".dcx"},
@@ -553,10 +796,13 @@ namespace BinderTool
                         "71_MapTile.mtmskbnd"
                     }
                 },
+                new ulong[] {
+                    0, 0
+                },
                 "/menu",
                 "menu:"
             );
-        public static (string, GetEnumerator[], string, string) data0MenuSearch2 = (
+        public static FileSearch data0MenuSearch2 = new FileSearch(
                 "/menu/{0}{1}{2}.sblytbnd.dcx",
                 new GetEnumerator[] {
                     () => new string[] {"", "Hi/", "Low/"},
@@ -577,10 +823,13 @@ namespace BinderTool
                         "80_Language"
                     }
                 },
+                new ulong[] {
+                    0, 0, 0
+                },
                 "/menu",
                 "menu:"
             );
-        public static (string, GetEnumerator[], string, string) data0MenuSearch3 = (
+        public static FileSearch data0MenuSearch3 = new FileSearch(
                 "/menu/{1}{2}{3}.{0}",
                 new GetEnumerator[] {
                     () => new string[] {"tpf.dcx", "tpfbhd"},
@@ -602,19 +851,25 @@ namespace BinderTool
                         "80_Language"
                     }
                 },
+                new ulong[] {
+                    0, 0, 0, 0
+                },
                 "/menu",
                 "menu:"
             );
-        public static (string, GetEnumerator[], string, string) data0MenuSearch4 = (
+        public static FileSearch data0MenuSearch4 = new FileSearch(
                 "/menu/MapImage/{0}{1}.tpf.dcx",
                 new GetEnumerator[] {
                     () => Enumerable.Range(0, byte.MaxValue).Select(c => ""+(char)c),
                     () => Enumerable.Range(0, byte.MaxValue).Select(c => ""+(char)c),
                 },
+                new ulong[] {
+                    255, 255
+                },
                 "/menu",
                 "menu:"
             );
-        public static (string, GetEnumerator[], string, string) data0PartsSearch = (
+        public static FileSearch data0PartsSearch = new FileSearch(
                 "/parts/{1}{2}_{3}_{4}{0}.partsbnd.dcx",
                 new GetEnumerator[] {
                     () => new string[] {"", "_l"},
@@ -623,28 +878,37 @@ namespace BinderTool
                     () => Enumerable.Range('a', 26).Select(c => ""+(char)c),
                     Range0Padded(0, 10000, 4)
                 },
+                new ulong[] {
+                    26, 26, 26, 10_000
+                },
                 "/parts",
                 "parts:"
             );
-        public static (string, GetEnumerator[], string, string) data0FacegenSearch = (
+        public static FileSearch data0FacegenSearch = new FileSearch(
                 "/facegen/{0}.fgbnd.dcx",
                 new GetEnumerator[] {
                     () => new string[] {"FaceGen"}
                 },
+                new ulong[] {
+                    0
+                },
                 "/facegen",
                 "facegen:"
             );
-        public static (string, GetEnumerator[], string, string) data0CutsceneSearch = (
+        public static FileSearch data0CutsceneSearch = new FileSearch(
                 "/cutscene/s{0}_{1}_{2}.cutscenebnd.dcx",
                 new GetEnumerator[] {
                     Range0Padded(0, 100, 2),
                     Range0Padded(0, 100, 2),
                     Range0Padded(0, 10000, 4)
                 },
+                new ulong[] {
+                    100, 100, 10_000
+                },
                 "/cutscene",
                 "cutscenebnd:"
             );
-        public static (string, GetEnumerator[], string, string) data0CutsceneSearch2 = (
+        public static FileSearch data0CutsceneSearch2 = new FileSearch(
                 "/cutscene/{0}_{1}.tpfbnd.dcx",
                 new GetEnumerator[] {
                     () => GetFilesHashable().Select(f => {
@@ -654,186 +918,275 @@ namespace BinderTool
                     }).Where(f => f != null),
                     Range0Padded(0, 100, 2),
                 },
+                new ulong[] {
+                    0, 100
+                },
                 "/cutscene",
                 "cutscenebnd:"
             );
-        public static (string, GetEnumerator[], string, string) data0MovieSearch = (
+        public static FileSearch data0MovieSearch = new FileSearch(
                 "/movie/{1}.bk2{0}",
                 new GetEnumerator[] {
                     () => new string[] {"", ".dcx"},
                     Range0Padded(0, 100000000, 8),
                 },
+                new ulong[] {
+                    0, 1_0000_0000
+                },
                 "/movie",
                 "movie:"
             );
-        public static (string, GetEnumerator[], string, string) data0WwiseSearch = (
+        public static FileSearch data0WwiseSearch = new FileSearch(
                 "/sound/{0}.mobnkinfo",
                 new GetEnumerator[] {
                     () => new string[] {"SoundbanksInfo"}
                 },
+                new ulong[] {
+                    0
+                },
                 "/sound",
                 "wwise_mobnkinfo:"
             );
-        public static (string, GetEnumerator[], string, string) data0WwiseSearch2 = (
+        public static FileSearch data0WwiseSearch2 = new FileSearch(
                 "/sound/{0}{1}.moaeibnd.dcx",
                 new GetEnumerator[] {
                     () => new string[] {"", "enus/"},
                     () => new string[] {"AdditionalEventInfo"}
                 },
+                new ulong[] {
+                    0, 0
+                },
                 "/sound",
                 "wwise_moaeibnd:"
             );
-        public static (string, GetEnumerator[], string, string) data0SfxbndSearch = (
+        public static FileSearch data0SfxbndSearch = new FileSearch(
                 "/sfx/SfxBnd_c{0}.ffxbnd.dcx",
                 new GetEnumerator[] {
                     Range0Padded(0, 10000, 4)
                 },
-                "/sfx",
-                "sfxbnd:"
-            );
-        public static (string, GetEnumerator[], string, string) data0SfxbndSearch2 = (
-                "/sfx/SfxBnd_m{0}.ffxbnd.dcx",
-                new GetEnumerator[] {
-                    Range0Padded(0, 100, 2)
+                new ulong[] {
+                    10_000
                 },
                 "/sfx",
                 "sfxbnd:"
             );
-        public static (string, GetEnumerator[], string, string) data0SfxbndSearch3 = (
-                "/sfx/SfxBnd_m{0}_{1}_{2}_{3}.ffxbnd.dcx",
-                new GetEnumerator[] {
-                    Range0Padded(0, 100, 2),
-                    Range0Padded(0, 100, 2),
-                    Range0Padded(0, 100, 2),
-                    Range0Padded(0, 100, 2)
-                },
-                "/sfx",
-                "sfxbnd:"
-            );
-        public static (string, GetEnumerator[], string, string) data0SfxbndSearch4 = (
-                "/sfx/{0}.ffxbnd.dcx",
-                new GetEnumerator[] {
-                    () => new string[] {"SfxBnd_CommonEffects"}
-                },
-                "/sfx",
-                "sfxbnd:"
-            );
-        public static (string, GetEnumerator[], string, string) data1AetTpfSearch = (
-                "/asset/aet/aet{1}/aet{1}_{2}{0}.tpf.dcx",
-                new GetEnumerator[] {
-                    () => new string[] {"", "_l", "_billboards", "_billboards_l"},
-                    Range0Padded(0, 1000, 3),
-                    Range0Padded(0, 1000, 3)
-                },
-                "/asset",
-                "asset:"
-            );
-        public static (string, GetEnumerator[], string, string) data1AegGeombndSearch = (
+        public static FileSearch data0SfxbndSearch2 = new FileSearch(
+            "/sfx/SfxBnd_m{0}.ffxbnd.dcx",
+            new GetEnumerator[] {
+                Range0Padded(0, 100, 2)
+            },
+            new ulong[] {
+                100
+            },
+            "/sfx",
+            "sfxbnd:"
+        );
+        public static FileSearch data0SfxbndSearch3 = new FileSearch(
+            "/sfx/SfxBnd_m{0}_{1}_{2}_{3}.ffxbnd.dcx",
+            new GetEnumerator[] {
+                Range0Padded(0, 100, 2),
+                Range0Padded(0, 100, 2),
+                Range0Padded(0, 100, 2),
+                Range0Padded(0, 100, 2)
+            },
+            new ulong[] {
+                100, 100, 100, 100
+            },
+            "/sfx",
+            "sfxbnd:"
+        );
+        public static FileSearch data0SfxbndSearch4 = new FileSearch(
+            "/sfx/{0}.ffxbnd.dcx",
+            new GetEnumerator[] {
+                () => new string[] {"SfxBnd_CommonEffects"}
+            },
+            new ulong[] {
+                0
+            },
+            "/sfx",
+            "sfxbnd:"
+        );
+        public static FileSearch data0SfxbndSearch5 = new FileSearch(
+            "/sfx/SfxBnd_mimic{0}{1}.ffxbnd.dcx",
+            new GetEnumerator[] {
+                Range0Padded(0, 100_000_000, 8)
+            },
+            new ulong[] {
+                100_000_000
+            },
+            "/sfx",
+            "sfxbnd:",
+            Enumerable.Range(0, 10).Select<int, GetEnumerator>(i => () => new string[] { i.ToString() }).ToArray(),
+            new ulong[] {
+                1, 1, 1, 1, 1, 1, 1, 1, 1, 1
+            }
+        );
+        public static FileSearch data0SfxbndDevpatchSearch = new FileSearch(
+            "{0}.devpatch.dcx",
+            new GetEnumerator[] {
+                () => GetFilesHashable().Where(f => f.StartsWith("/sfx") && f.EndsWith(".ffxbnd.dxc")).Select(f => f.Replace(".dcx", ""))
+            },
+            new ulong[] {
+                0
+            },
+            "/sfx",
+            "patch_sfxbnd:"
+        );
+        public static FileSearch data1AetTpfSearch = new FileSearch(
+            "/asset/aet/aet{1}/aet{1}_{2}{0}.tpf.dcx",
+            new GetEnumerator[] {
+                () => new string[] {"", "_l", "_billboards", "_billboards_l"},
+                Range0Padded(0, 1000, 3),
+                Range0Padded(0, 1000, 3)
+            },
+            new ulong[] {
+                0, 1000, 1000
+            },
+            "/asset",
+            "asset:"
+        );
+        public static FileSearch data1AegGeombndSearch = new FileSearch(
                 "/asset/aeg/aeg{0}/aeg{0}_{1}.geombnd.dcx",
                 new GetEnumerator[] {
                     Range0Padded(0, 1000, 3),
                     Range0Padded(0, 1000, 3)
                 },
+                new ulong[] {
+                    1000, 1000
+                },
                 "/asset",
                 "asset:"
             );
-        public static (string, GetEnumerator[], string, string) data1AegGeomhkxbndSearch = (
+        public static FileSearch data1AegGeomhkxbndSearch = new FileSearch(
                 "/asset/aeg/aeg{1}/aeg{1}_{2}_{0}.geomhkxbnd.dcx",
                 new GetEnumerator[] {
                     () => new string[] { "h", "l" },
                     Range0Padded(0, 1000, 3),
                     Range0Padded(0, 1000, 3)
                 },
+                new ulong[] {
+                    0, 1000, 1000
+                },
                 "/asset",
                 "asset:"
             );
-        public static (string, GetEnumerator[], string, string) data3ChrChrbndSearch = (
+        public static FileSearch data3ChrChrbndSearch = new FileSearch(
                 "/chr/c{0}.chrbnd.dcx",
                 new GetEnumerator[] {
                     Range0Padded(0, 10000, 4),
                 },
+                new ulong[] {
+                    10_000
+                },
                 "/chr",
                 "chr:"
             );
-        public static (string, GetEnumerator[], string, string) data3ChrAnibndSearch = (
+        public static FileSearch data3ChrAnibndSearch = new FileSearch(
                 "/chr/c{0}.anibnd.dcx",
                 new GetEnumerator[] {
                     Range0Padded(0, 10000, 4),
                 },
-                "/chr",
-                "chranibnd:"
-            );
-        public static (string, GetEnumerator[], string, string) data3ChrAnibndSearch2 = (
-                "/chr/c0000_a{0}.anibnd.dcx",
-                new GetEnumerator[] {
-                    () => new string[] {"00_lo", "00_md", "00_hi", "0x", "1x", "2x", "3x", "4x", "5x", "6x", "7x", "8x", "9x"},
+                new ulong[] {
+                    10_000
                 },
                 "/chr",
                 "chranibnd:"
             );
-        public static (string, GetEnumerator[], string, string) data3ChrAnibndSearch3 = (
+        public static FileSearch data3ChrAnibndSearch2 = new FileSearch(
+                "/chr/c0000_a{0}.anibnd.dcx",
+                new GetEnumerator[] {
+                    () => new string[] {"00_lo", "00_md", "00_hi", "0x", "1x", "2x", "3x", "4x", "5x", "6x", "7x", "8x", "9x"},
+                },
+                new ulong[] {
+                    0
+                },
+                "/chr",
+                "chranibnd:"
+            );
+        public static FileSearch data3ChrAnibndSearch3 = new FileSearch(
                 "/chr/c{1}_div{0}.anibnd.dcx",
                 new GetEnumerator[] {
                     Range0Padded(0, 100, 2),
                     Range0Padded(0, 10000, 4),
                 },
+                new ulong[] {
+                    100, 10_000
+                },
                 "/chr",
                 "chranibnd:"
             );
-        public static (string, GetEnumerator[], string, string) data3ChrBehbndSearch = (
+        public static FileSearch data3ChrBehbndSearch = new FileSearch(
                 "/chr/c{0}.behbnd.dcx",
                 new GetEnumerator[] {
                     Range0Padded(0, 10000, 4),
                 },
+                new ulong[] {
+                    10_000
+                },
                 "/chr",
                 "chrbehbnd:"
             );
-        public static (string, GetEnumerator[], string, string) data3ChrTexbndSearch = (
+        public static FileSearch data3ChrTexbndSearch = new FileSearch(
                 "/chr/c{1}_{0}.texbnd.dcx",
                 new GetEnumerator[] {
                     () => new string[] {"h", "l"},
                     Range0Padded(0, 10000, 4),
                 },
+                new ulong[] {
+                    0, 10_000
+                },
                 "/chr",
                 "chrtexbnd:"
             );
-        public static (string, GetEnumerator[], string, string) sdSearch = (
+        public static FileSearch sdSearch = new FileSearch(
                 "/{0}cs_c{1}.bnk",
                 new GetEnumerator[] {
                     () => new string[] {"", "enus/"},
                     Range0Padded(0, 10000, 4),
                 },
+                new ulong[] {
+                    0, 10_000
+                },
                 "/",
                 "wwise:/"
             );
-        public static (string, GetEnumerator[], string, string) sdSearch2 = (
+        public static FileSearch sdSearch2 = new FileSearch(
                 "/aeg{0}_{1}.bnk",
                 new GetEnumerator[] {
                     Range0Padded(0, 1000, 3),
                     Range0Padded(0, 1000, 3),
                 },
+                new ulong[] {
+                    1000, 1000
+                },
                 "/",
                 "wwise:/"
             );
-        public static (string, GetEnumerator[], string, string) sdSearch3 = (
+        public static FileSearch sdSearch3 = new FileSearch(
                 "/cs_{0}m{1}{2}.bnk",
                 new GetEnumerator[] {
                     () => new string[] {"", "s"},
                     Range0Padded(0, 100, 2),
                     () => (new string[] { "" }).AsEnumerable().Union(Range0Padded(0, 1000, 3)().Select(s => "_"+s)),
                 },
+                new ulong[] {
+                    0, 100, 1001
+                },
                 "/",
                 "wwise:/"
             );
-        public static (string, GetEnumerator[], string, string) sdSearch4 = (
+        public static FileSearch sdSearch4 = new FileSearch(
                 "/{0}.bnk",
                 new GetEnumerator[] {
                     () => new string[] {"cs_main", "cs_smain", "init", "vc700", "enus/vcmain"},
                 },
+                new ulong[] {
+                    0
+                },
                 "/enus",
                 "wwise:/enus"
             );
-        public static (string, GetEnumerator[], string, string) sdSearch5 = (
+        public static FileSearch sdSearch5 = new FileSearch(
                 "/{0}s{1}_{2}_{3}.bnk",
                 new GetEnumerator[] {
                     () => new string[] {"", "enus/"},
@@ -841,32 +1194,42 @@ namespace BinderTool
                     Range0Padded(0, 100, 2),
                     Range0Padded(0, 10000, 4),
                 },
+                new ulong[] {
+                    0, 100, 100, 10_000
+                },
                 "/enus",
                 "wwise:/enus"
             );
-        public static (string, GetEnumerator[], string, string) sdSearch6 = (
+        public static FileSearch sdSearch6 = new FileSearch(
                 "/enus/vc{0}.bnk",
                 new GetEnumerator[] {
                     Range0Padded(0, 1000, 3),
+                },
+                new ulong[] {
+                    1000
                 },
                 "/enus",
                 "wwise:/enus"
             );
 
-        public static (string, GetEnumerator[], string, string) pscSearch = (
+        public static FileSearch pscSearch = new FileSearch(
                 "/shader/PipelineStateCache{0}{1}{2}{3}{4}{5}.dat.dcx",
                 new GetEnumerator[] {
                     () => "abcdefghijklmnopqrstuvwxyz0123456789_[]".Select(s => ""+s),
                 },
+                new ulong[] {
+                    0
+                },
                 "/shader",
                 "shader:/"
             );
-        public static (string, GetEnumerator[], string, string, GetEnumerator[]) sdSearch7()
-        {
-            return (
+        public static FileSearch sdSearch7 = new FileSearch(
                 "/enus/wem/{0}/{0}{1}.wem",
                 new GetEnumerator[] {
                     () => Enumerable.Range(0, 100000000).SelectMany(i => new string[] {i.ToString(), new string(i.ToString().Reverse().ToArray()) })
+                },
+                new ulong[] {
+                    100, 100, 10_000
                 },
                 "/enus",
                 "wwise:/enus",
@@ -880,9 +1243,11 @@ namespace BinderTool
                     () => Enumerable.Range(70, 10).Select(i => i.ToString()),
                     () => Enumerable.Range(80, 10).Select(i => i.ToString()),
                     () => Enumerable.Range(90, 10).Select(i => i.ToString()),
+                },
+                new ulong[] {
+                    10, 10, 10, 10, 10, 10, 10, 10, 10, 10
                 }
             );
-        }
         public static (string, GetEnumerator[], string, string, GetEnumerator[]) sdSearch8()
         {
             return (
@@ -905,7 +1270,7 @@ namespace BinderTool
                 }
             );
         }
-        public static (string, GetEnumerator[], string, string) data0MenuSearch5 = (
+        public static FileSearch data0MenuSearch5 = new FileSearch(
                 "/menu/{0}{1}.gfx",
                 new GetEnumerator[] {
                     () => new string[] {
@@ -1027,15 +1392,21 @@ namespace BinderTool
                         "font"
                     }
                 },
+                new ulong[] {
+                    0, 0
+                },
                 "/menu",
                 "menu:"
             );
-        public static (string, GetEnumerator[], string, string) devpatchSearch = (
+        public static FileSearch devpatchSearch = new FileSearch(
                 "{0}",
                 new GetEnumerator[] {
                     () => GetFilesHashable()
                     .SelectMany(f => f.EndsWith(".dcx") ? new string[] {f, f.Replace(".dcx", "")} : new string[] {f})
                     .SelectMany(f => new string[] {f+".devpatch", f+".devpatch.dcx"})
+                },
+                new ulong[] {
+                    0
                 },
                 "/",
                 ""
@@ -1068,7 +1439,7 @@ namespace BinderTool
                 }
             }
             return (
-                "/map/{0}.mapbnd.dcx", 
+                "/map/{0}.mapbnd.dcx",
                 new GetEnumerator[] { () => maps.Select(s => s.Substring(0, 3) + "/" + s.Substring(0, 12) + "/" + s) }
             );
         }
@@ -1084,7 +1455,7 @@ namespace BinderTool
             Array.Sort(ans);
             File.WriteAllLines(outputPath, ans);
         }
-        public static void CreateHashList(string outputPath, params string[] bhds)
+        public static int CreateHashList(string outputPath, params string[] bhds)
         {
             HashSet<ulong> hashes = new HashSet<ulong>();
             foreach (var bhdName in bhds) {
@@ -1105,6 +1476,7 @@ namespace BinderTool
                 writer.Write(hash);
             }
             output.Close();
+            return hashes.Count;
         }
         public static HashSet<ulong> ReadHashList(string filename)
         {

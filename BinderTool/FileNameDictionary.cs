@@ -204,6 +204,7 @@ namespace BinderTool
             { "wwise", "sd:" },
             { "sfx", "data0:/sfx" },
             { "sfxbnd", "data0:/sfx" },
+            { "patch_sfxbnd", "data0:/sfx" },
             { "title", "data0:/adhoc" },
             { "", "data0:/adhoc" },
             { "dbgai", "data0:/script_interroot" },
