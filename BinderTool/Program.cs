@@ -57,6 +57,7 @@ namespace BinderTool
                 var hashes = FileSearch.ReadHashList(options.InputPath);
                 if (options.OutputPath == "") search.Search(hashes);
                 else search.SearchAndUpdate(hashes, options.OutputPath);
+                Finish();
                 return;
             }
 
@@ -76,6 +77,46 @@ namespace BinderTool
                 if (options.OutputPath == null) options.OutputPath = Path.Combine(options.InputPath, "filename_hashes.hashlist");
                 var ans = FileSearch.CreateHashList(options.OutputPath, bhds.ToArray());
                 Console.WriteLine($"Created hash list with {ans} hashes.");
+                Finish();
+                return;
+            }
+
+            //outputs information on the number of known vs. missing file names
+            if (options.DictionaryProgress) {
+                var bhds = new List<string>();
+                var stack = new List<string>();
+                stack.AddRange(Directory.GetDirectories(options.InputPath));
+                stack.AddRange(Directory.GetFiles(options.InputPath));
+                while (stack.Count > 0) {
+                    var curr = stack.Last();
+                    stack.RemoveAt(stack.Count - 1);
+                    if (File.Exists(curr) && curr.EndsWith(".bhd")) bhds.Add(curr);
+                    if (Directory.Exists(curr)) stack.AddRange(Directory.GetFiles(curr));
+                }
+                foreach (var bhdName in bhds) {
+                    var (_, game) = Options.GetFileType(bhdName);
+                    FileNameDictionary dictionary = FileNameDictionary.OpenFromFile(game);
+                    var bhd = Bhd5File.Read(Program.DecryptBhdFile(bhdName, game), game);
+                    string fileNameWithoutExtension = Path.GetFileName(bhdName).Replace("bhd", "bdt").Replace("Ebl.bdt", "").Replace(".bdt", "");
+                    string archiveName = fileNameWithoutExtension.ToLower();
+                    int known = 0;
+                    int total = 0;
+                    List<ulong> missing = new List<ulong>();
+                    foreach (var bucket in bhd.GetBuckets()) {
+                        foreach (var entry in bucket.GetEntries()) {
+                            total++;
+                            bool fileNameFound = dictionary.TryGetFileName(entry.FileNameHash, archiveName, out string fileName);
+                            if (fileNameFound) known++;
+                            else missing.Add(entry.FileNameHash);
+                        }
+                    }
+                    Console.WriteLine($"{archiveName}: {known}/{total} ({((float)known/total*100.0):F2})");
+                    if (missing.Count > 0) {
+                        Console.WriteLine("Missing:");
+                        foreach (var m in missing) Console.WriteLine($"\t{m}");
+                    }
+                }
+                Finish();
                 return;
             }
 
@@ -87,6 +128,7 @@ namespace BinderTool
                 if (options.InputGameVersion == GameVersion.Detect) options.InputGameVersion = g;
                 if (options.InputGameVersion == GameVersion.Detect && options.InputType != FileType.Folder) {
                     Console.WriteLine("Unable to detect game verison. Please specify a game version.");
+                    Finish();
                     return;
                 }
             }
@@ -160,8 +202,13 @@ namespace BinderTool
                 //handle input type != folder
                 Process(options);
             }
-            //stop the console from closing automatically in debug builds
+            Finish();
+        }
+
+        private static void Finish()
+        {
 #if (DEBUG)
+            Console.WriteLine("Press any key to exit...");
             Console.ReadKey();
 #endif
         }
@@ -353,7 +400,7 @@ namespace BinderTool
                         }
                     }
 
-                    if (options.AutoExtractDcx && extension == ".dcx")
+                    if (extension == ".dcx")
                     {
                         try {
                             DcxFile dcxFile = DcxFile.Read(data);
@@ -483,6 +530,9 @@ namespace BinderTool
             string[] sp2 = filename.Replace('\\', '/').Split('/');
             sp2 = sp2[sp2.Length - 1].Split('.');
             string extension = "."+sp[sp.Length - 1];
+            if (options.OnlyProcessExtension.Length > 0 && extension.ToLower() != options.OnlyProcessExtension.ToLower()) {
+                return 0;
+            }
             if (extension == ".dcx") {
                 DcxFile dcxFile = DcxFile.Read(data);
                 data = new MemoryStream(dcxFile.Decompress());
@@ -491,6 +541,9 @@ namespace BinderTool
                 extension = "."+sp[sp.Length - 1];
                 sp2 = filename.Replace('\\', '/').Split('/');
                 sp2 = sp2[sp2.Length - 1].Split('.');
+            }
+            if (options.OnlyProcessExtension.Length > 0 && extension.ToLower() != options.OnlyProcessExtension.ToLower()) {
+                return 0;
             }
             //auto extract .bnd
             if (options.AutoExtractBnd && extension.EndsWith("bnd")) {
@@ -518,8 +571,7 @@ namespace BinderTool
             } else if (options.AutoExtractEnfl && extension == ".entryfilelist") {
                 var ans = UnpackEnflFile(data);
                 var path = Path.Combine(options.OutputPath, filename + ".csv");
-                File.WriteAllText(path, ans);
-                return (ulong)new FileInfo(path).Length;
+                return WriteFile(path, new MemoryStream(Encoding.UTF8.GetBytes(ans)));
             }
             //not doing any auto extract, just output the raw file
             string newFileNamePath = Path.Combine(options.OutputPath, filename);
@@ -667,7 +719,7 @@ namespace BinderTool
                     return true;
                 case "filt":
                     if (gameVersion == GameVersion.DarkSouls2) extension = ".fltparam"; // DS II
-                    else extension = ".gparam"; // DS III
+                    else extension = ".gparam"; // DS III+
                     return true;
                 case "VSDF":
                     extension = ".vsd";
@@ -974,10 +1026,9 @@ namespace BinderTool
             TpfFile tpfFile = TpfFile.OpenTpfFile(data);
             foreach (var entry in tpfFile.Entries) {
                 string outputFilePath = Path.Combine(options.OutputPath, entry.FileName);
-                Directory.CreateDirectory(Path.GetDirectoryName(outputFilePath));
-                using (var outputStream = File.Create(outputFilePath)) {
-                    bytesWritten += entry.Write(outputStream);
-                }
+                var stream = new MemoryStream();
+                entry.Write(stream);
+                bytesWritten += WriteFile(outputFilePath, stream);
             }
             return bytesWritten;
         }
@@ -1104,9 +1155,7 @@ namespace BinderTool
                     }
                     ans.AppendLine();
                 }
-                Directory.CreateDirectory(Directory.GetParent(outputPath).FullName);
-                File.WriteAllText(outputPath + ".csv", ans.ToString());
-                return (ulong)ans.Length;
+                return WriteFile(outputPath, new MemoryStream(Encoding.UTF8.GetBytes(ans.ToString())));
             }
         }
 
@@ -1138,9 +1187,7 @@ namespace BinderTool
             }
 
             outputPath += ".txt";
-            Directory.CreateDirectory(Path.GetDirectoryName(outputPath));
-            File.WriteAllText(outputPath, builder.ToString());
-            return (ulong)new FileInfo(outputPath).Length;
+            return WriteFile(outputPath, new MemoryStream(Encoding.UTF8.GetBytes(builder.ToString())));
         }
 
         /// <summary>
@@ -1149,8 +1196,7 @@ namespace BinderTool
         private static void UnpackEnflFile(Options options)
         {
             var ans = UnpackEnflFile(new FileStream(options.InputPath, FileMode.Open));
-            Directory.CreateDirectory(Path.GetDirectoryName(options.OutputPath));
-            File.WriteAllText(options.OutputPath + ".csv", ans);
+            WriteFile(options.OutputPath+".csv", new MemoryStream(Encoding.UTF8.GetBytes(ans.ToString())));
         }
 
         /// <summary>

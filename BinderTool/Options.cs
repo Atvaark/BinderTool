@@ -21,9 +21,6 @@ namespace BinderTool
         [Value(1, Required = false, Default = null, HelpText = "The output file or folder")]
         public string OutputPath { get; set; }
 
-        [Option("extract-dcx", Default = true, HelpText = "Automatically extract dcx files instead of outputting the .dcx")]
-        public bool AutoExtractDcx { get; set; }
-
         [Option("extract-bnd", Default = false, HelpText = "Automatically extract bnd files instead of outputting the .bnd")]
         public bool AutoExtractBnd { get; set; }
 
@@ -57,6 +54,9 @@ namespace BinderTool
         [Option("only-output-unknown", Default = false, HelpText = "Only outputs files with an unknown name. Intended for developer use.")]
         public bool OnlyOutputUnknown { get; set; }
 
+        [Option("dictionary-progress", Default = false, HelpText = "Outputs information on the number of known vs. missing file names for .bhd files. Intended for developer use.")]
+        public bool DictionaryProgress { get; set; }
+
         [Option('r', "recurse", Default = false, HelpText = "When using folder input, recurse to child folders")]
         public bool Recurse { get; set; }
 
@@ -67,7 +67,6 @@ namespace BinderTool
                 InputType = InputType,
                 InputPath = InputPath,
                 OutputPath = OutputPath,
-                AutoExtractDcx = AutoExtractDcx,
                 AutoExtractBnd = AutoExtractBnd,
                 AutoExtractParam = AutoExtractParam,
                 AutoExtractFmg = AutoExtractFmg,
