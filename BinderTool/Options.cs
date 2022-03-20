@@ -27,6 +27,12 @@ namespace BinderTool
         [Option("extract-bnd", Default = false, HelpText = "Automatically extract bnd files instead of outputting the .bnd")]
         public bool AutoExtractBnd { get; set; }
 
+        [Option("extract-bdt", Default = false, HelpText = "Automatically extract bdt files instead of outputting the .bdt and .bhd")]
+        public bool AutoExtractBdt { get; set; }
+
+        [Option("extract-tpf", Default = false, HelpText = "Automatically extract tpf files instead of outputting the .tpf")]
+        public bool AutoExtractTpf { get; set; }
+
         [Option("extract-param", Default = false, HelpText = "Automatically extract param files instead of outputting the .param")]
         public bool AutoExtractParam { get; set; }
 
@@ -66,6 +72,8 @@ namespace BinderTool
                 AutoExtractParam = AutoExtractParam,
                 AutoExtractFmg = AutoExtractFmg,
                 AutoExtractEnfl = AutoExtractEnfl,
+                AutoExtractTpf = AutoExtractTpf,
+                AutoExtractBdt = AutoExtractBdt,
                 CollateEnflPath = CollateEnflPath,
                 CreateHashList = CreateHashList,
                 FileNameSearch = FileNameSearch,

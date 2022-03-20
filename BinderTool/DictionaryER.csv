@@ -83322,6 +83322,7 @@ wwise:/enus/wem/37/379084810.wem
 wwise:/enus/wem/37/379273301.wem
 wwise:/enus/wem/37/379284199.wem
 wwise:/enus/wem/37/379486292.wem
+wwise:/enus/wem/37/379683279.wem
 wwise:/enus/wem/37/37977029.wem
 wwise:/enus/wem/37/379771489.wem
 wwise:/enus/wem/38/38008197.wem
@@ -88227,6 +88228,7 @@ wwise:/wem/10/1009777742.wem
 wwise:/wem/10/1016907567.wem
 wwise:/wem/10/1017813954.wem
 wwise:/wem/10/1034277839.wem
+wwise:/wem/10/1035756190.wem
 wwise:/wem/10/1036800510.wem
 wwise:/wem/10/104016490.wem
 wwise:/wem/10/1041048659.wem
@@ -88241,14 +88243,17 @@ wwise:/wem/10/106555262.wem
 wwise:/wem/10/1067720970.wem
 wwise:/wem/10/1068997038.wem
 wwise:/wem/10/1072180640.wem
+wwise:/wem/10/107503192.wem
 wwise:/wem/11/110161752.wem
 wwise:/wem/11/111510624.wem
 wwise:/wem/11/116806424.wem
+wwise:/wem/11/117751708.wem
 wwise:/wem/12/128843691.wem
 wwise:/wem/13/130494481.wem
 wwise:/wem/13/132924756.wem
 wwise:/wem/13/134487723.wem
 wwise:/wem/14/141743142.wem
+wwise:/wem/14/141774961.wem
 wwise:/wem/14/143544681.wem
 wwise:/wem/14/144746529.wem
 wwise:/wem/14/148502046.wem
@@ -88272,6 +88277,7 @@ wwise:/wem/21/21349384.wem
 wwise:/wem/21/21524853.wem
 wwise:/wem/21/218636136.wem
 wwise:/wem/22/225686462.wem
+wwise:/wem/22/226381116.wem
 wwise:/wem/22/229309779.wem
 wwise:/wem/23/233831135.wem
 wwise:/wem/23/234263218.wem
@@ -88294,6 +88300,7 @@ wwise:/wem/32/321809242.wem
 wwise:/wem/32/327218607.wem
 wwise:/wem/33/330266516.wem
 wwise:/wem/33/332270677.wem
+wwise:/wem/34/345327097.wem
 wwise:/wem/34/349235166.wem
 wwise:/wem/35/353726024.wem
 wwise:/wem/35/355264149.wem
@@ -88321,6 +88328,7 @@ wwise:/wem/42/428546892.wem
 wwise:/wem/42/428606448.wem
 wwise:/wem/42/429540192.wem
 wwise:/wem/43/435288208.wem
+wwise:/wem/43/437381930.wem
 wwise:/wem/43/43821288.wem
 wwise:/wem/44/448543488.wem
 wwise:/wem/44/449621691.wem
@@ -88346,6 +88354,7 @@ wwise:/wem/51/516613134.wem
 wwise:/wem/52/525001239.wem
 wwise:/wem/52/529164827.wem
 wwise:/wem/53/531894383.wem
+wwise:/wem/53/534524371.wem
 wwise:/wem/53/537722045.wem
 wwise:/wem/53/538856980.wem
 wwise:/wem/54/545932559.wem
@@ -88445,6 +88454,7 @@ wwise:/wem/87/873596599.wem
 wwise:/wem/88/880441298.wem
 wwise:/wem/88/882173052.wem
 wwise:/wem/88/885258239.wem
+wwise:/wem/89/897726803.wem
 wwise:/wem/89/899868918.wem
 wwise:/wem/90/902905259.wem
 wwise:/wem/90/905955999.wem
@@ -88471,5 +88481,6 @@ wwise:/wem/99/995763001.wem
 wwise:/wem/99/995777523.wem
 wwise_moaeibnd:/AdditionalEventInfo.moaeibnd.dcx
 wwise_moaeibnd:/enus/AdditionalEventInfo.moaeibnd.dcx
-wwise_mobnkinfo:/pck/normal.pck
 wwise_mobnkinfo:/SoundbanksInfo.mobnkinfo
+wwise_pck:/first.pck
+wwise_pck:/normal.pck

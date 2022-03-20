@@ -14,6 +14,7 @@ namespace BinderTool
             @"N:\GR\data\INTERROOT_win64\",
             @"N:\FDP\data\INTERROOT_win64\",
             @"N:\FDP\data\INTERROOT_win64_havok2018_1\",
+            @"N:\GR\data\INTERROOT_win64_havok2018_1\",
             @"N:\GR\data\",
             @"N:\SPRJ\data\",
             @"N:\FDP\data\",
@@ -201,6 +202,7 @@ namespace BinderTool
             { "wwise_mobnkinfo", "data0:/sound" },
             { "wwise_moaeibnd", "data0:/sound" },
             { "wwise_testdata", "debugdata:/testdata/sound" },
+            { "wwise_pck", "data0:/sound/pck" },
             { "wwise", "sd:" },
             { "sfx", "data0:/sfx" },
             { "sfxbnd", "data0:/sfx" },
@@ -408,7 +410,7 @@ namespace BinderTool
             return dictionary;
         }
 
-        private static uint GetHashCode(string filePath, uint prime = 37u)
+        public static uint GetHashCode(string filePath, uint prime = 37u)
         {
             if (string.IsNullOrEmpty(filePath))
                 return 0u;

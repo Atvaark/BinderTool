@@ -22,6 +22,13 @@ namespace BinderTool.Core.Bdf4
             return bdfStream;
         }
 
+        public static Bdf4FileStream OpenStream(Stream inputStream)
+        {
+            Bdf4FileStream ans = new Bdf4FileStream(inputStream);
+            ans.ReadHeader();
+            return ans;
+        }
+
         private void ReadHeader()
         {
             BinaryReader reader = new BinaryReader(_inputStream, Encoding.ASCII, true);

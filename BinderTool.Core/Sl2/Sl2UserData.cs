@@ -18,7 +18,7 @@ namespace BinderTool.Core.Sl2
         {
             _key = key;
             _iv = new byte[UserDataIvSize];
-            _encrypted = Equals(key, new byte[key.Length]) ? true : false;
+            _encrypted = key != null;
         }
 
         public string Name { get; set; }
@@ -30,9 +30,7 @@ namespace BinderTool.Core.Sl2
             if (!_encrypted)
                 return EncryptedUserData;
 
-            MemoryStream ms = new MemoryStream();
-            CryptographyUtility.DecryptAesCbc(new MemoryStream(EncryptedUserData), _key, _iv).CopyTo(ms);
-            return ms.ToArray();
+            return CryptographyUtility.DecryptAesCbc(new MemoryStream(EncryptedUserData), _key, _iv).ToArray();
         }
 
         public static Sl2UserData ReadSl2UserData(Stream inputStream, byte[] key, int size, string name)

@@ -93,11 +93,11 @@ namespace BinderTool.Core.Tpf
             return result;
         }
         
-        public void Write(Stream outputStream)
+        public ulong Write(Stream outputStream)
         {
             if (Data == null)
             {
-                return;
+                return 0;
             }
 
             byte[] data = Data;
@@ -130,11 +130,10 @@ namespace BinderTool.Core.Tpf
                               },
                     Data = DdsFile.ConvertData(data, Height, Width, dxgiFormat)
                 };
-                ddsFile.Write(outputStream);
-            }
-            else
-            {
+                return ddsFile.Write(outputStream);
+            } else {
                 outputStream.Write(data, 0, data.Length);
+                return (ulong)data.Length;
             }
         }
     }

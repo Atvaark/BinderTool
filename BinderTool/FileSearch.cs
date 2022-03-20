@@ -555,6 +555,15 @@ namespace BinderTool
                 "/other/mapinfotex",
                 "mapinfotex:"
             );
+        public static FileSearch data0PckSearch = new FileSearch(
+            "/sound/pck/{0}.pck",
+            new GetEnumerator[] {
+                () => new string[] {"normal", "nt", "first"}
+            },
+            new ulong[] {0},
+            "/sound/pck",
+            "wwise_pck:"
+        );
         public static FileSearch data0OtherSearch = new FileSearch(
                 "/other/{0}",
                 new GetEnumerator[] {
@@ -1287,63 +1296,60 @@ namespace BinderTool
             );
 
         public static FileSearch pscSearch = new FileSearch(
-                "/shader/PipelineStateCache{0}{1}{2}{3}{4}{5}.dat.dcx",
+                "/shader/PipelineStateCache{0}.dat.dcx",
                 new GetEnumerator[] {
-                    () => "abcdefghijklmnopqrstuvwxyz0123456789_[]".Select(s => ""+s),
+                    () => new string[] {"_Phantom", "_[RT]", "_[RT]_Phantom"},
                 },
                 new ulong[] {
                     0
                 },
                 "/shader",
-                "shader:/"
+                "shader:"
             );
         public static FileSearch sdSearch7 = new FileSearch(
-                "/enus/wem/{0}/{0}{1}.wem",
-                new GetEnumerator[] {
-                    () => Enumerable.Range(0, 100000000).SelectMany(i => new string[] {i.ToString(), new string(i.ToString().Reverse().ToArray()) })
-                },
-                new ulong[] {
-                    100, 100, 10_000
-                },
-                "/enus",
-                "wwise:/enus",
-                new GetEnumerator[] {
-                    () => Enumerable.Range(10, 10).Select(i => i.ToString()),
-                    () => Enumerable.Range(20, 10).Select(i => i.ToString()),
-                    () => Enumerable.Range(30, 10).Select(i => i.ToString()),
-                    () => Enumerable.Range(40, 10).Select(i => i.ToString()),
-                    () => Enumerable.Range(50, 10).Select(i => i.ToString()),
-                    () => Enumerable.Range(60, 10).Select(i => i.ToString()),
-                    () => Enumerable.Range(70, 10).Select(i => i.ToString()),
-                    () => Enumerable.Range(80, 10).Select(i => i.ToString()),
-                    () => Enumerable.Range(90, 10).Select(i => i.ToString()),
-                },
-                new ulong[] {
-                    10, 10, 10, 10, 10, 10, 10, 10, 10, 10
-                }
-            );
-        public static (string, GetEnumerator[], string, string, GetEnumerator[]) sdSearch8()
-        {
-            return (
-                "/wem/{0}/{0}{1}.wem",
-                new GetEnumerator[] {
-                    () => Enumerable.Range(0, 100000000).SelectMany(i => new string[] {i.ToString(), new string(i.ToString().Reverse().ToArray()) })
-                },
-                "/wem",
-                "wwise:/wem",
-                new GetEnumerator[] {
-                    () => Enumerable.Range(10, 10).Select(i => i.ToString()),
-                    () => Enumerable.Range(20, 10).Select(i => i.ToString()),
-                    () => Enumerable.Range(30, 10).Select(i => i.ToString()),
-                    () => Enumerable.Range(40, 10).Select(i => i.ToString()),
-                    () => Enumerable.Range(50, 10).Select(i => i.ToString()),
-                    () => Enumerable.Range(60, 10).Select(i => i.ToString()),
-                    () => Enumerable.Range(70, 10).Select(i => i.ToString()),
-                    () => Enumerable.Range(80, 10).Select(i => i.ToString()),
-                    () => Enumerable.Range(90, 10).Select(i => i.ToString()),
-                }
-            );
-        }
+            "/enus/wem/{0}/{0}{1}.wem",
+            new GetEnumerator[] {
+                () => Enumerable.Range(0, 100000000).SelectMany(i => new string[] {i.ToString(), string.Format("{0:D8}", i) })
+            },
+            new ulong[] { 200000000 },
+            "/enus",
+            "wwise:/enus",
+            new GetEnumerator[] {
+                () => Enumerable.Range(0, 10).Select(i => "0"+i),
+                () => Enumerable.Range(10, 10).Select(i => i.ToString()),
+                () => Enumerable.Range(20, 10).Select(i => i.ToString()),
+                () => Enumerable.Range(30, 10).Select(i => i.ToString()),
+                () => Enumerable.Range(40, 10).Select(i => i.ToString()),
+                () => Enumerable.Range(50, 10).Select(i => i.ToString()),
+                () => Enumerable.Range(60, 10).Select(i => i.ToString()),
+                () => Enumerable.Range(70, 10).Select(i => i.ToString()),
+                () => Enumerable.Range(80, 10).Select(i => i.ToString()),
+                () => Enumerable.Range(90, 10).Select(i => i.ToString()),
+            },
+            new ulong[] { 10, 10, 10, 10, 10, 10, 10, 10, 10, 10 }
+        );
+        public static FileSearch sdSearch8 = new FileSearch(
+            "/wem/{0}/{0}{1}.wem",
+            new GetEnumerator[] {
+                () => Enumerable.Range(0, 100000000).SelectMany(i => new string[] {i.ToString(), string.Format("{0:D8}", i) })
+            },
+            new ulong[] { 200000000 },
+            "/wem",
+            "wwise:/wem",
+            new GetEnumerator[] {
+                () => Enumerable.Range(0, 10).Select(i => "0"+i),
+                () => Enumerable.Range(10, 10).Select(i => i.ToString()),
+                () => Enumerable.Range(20, 10).Select(i => i.ToString()),
+                () => Enumerable.Range(30, 10).Select(i => i.ToString()),
+                () => Enumerable.Range(40, 10).Select(i => i.ToString()),
+                () => Enumerable.Range(50, 10).Select(i => i.ToString()),
+                () => Enumerable.Range(60, 10).Select(i => i.ToString()),
+                () => Enumerable.Range(70, 10).Select(i => i.ToString()),
+                () => Enumerable.Range(80, 10).Select(i => i.ToString()),
+                () => Enumerable.Range(90, 10).Select(i => i.ToString()),
+            },
+            new ulong[] { 10, 10, 10, 10, 10, 10, 10, 10, 10, 10 }
+        );
         public static FileSearch data0MenuSearch5 = new FileSearch(
                 "/menu/{0}{1}.gfx",
                 new GetEnumerator[] {

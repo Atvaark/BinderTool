@@ -16,14 +16,11 @@ namespace BinderTool.Core.Bhf4
 
         public string Version { get; private set; }
 
-        public static Bhf4File OpenBhf4File(string bhf4FilePath)
+        public static Bhf4File OpenBhf4File(Stream inputStream)
         {
-            using (FileStream inputStream = new FileStream(bhf4FilePath, FileMode.Open))
-            {
-                Bhf4File bhf4File = new Bhf4File();
-                bhf4File.Read(inputStream);
-                return bhf4File;
-            }
+            Bhf4File bhf4File = new Bhf4File();
+            bhf4File.Read(inputStream);
+            return bhf4File;
         }
 
         public void Read(Stream inputStream)

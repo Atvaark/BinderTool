@@ -269,17 +269,20 @@ namespace BinderTool
                 var entries = bhdFile.GetBuckets().SelectMany(b => b.GetEntries());
                 var numEntries = entries.Count();
                 Console.WriteLine($"\"{bdtName}\" has {numEntries} files.");
-                var currEntryPos = (Console.CursorLeft, Console.CursorTop);
+                (int, int) currEntryPos = (Console.CursorLeft, Console.CursorTop);
+                Console.WriteLine("");
                 var entryNum = 0;
                 ulong bytesWritten = 0;
                 var extracted = 0;
                 var missingNames = 0;
+                List<(string, ulong, Stream)> bdts = new List<(string, ulong, Stream)>();
+                Dictionary<string, Stream> bhds = new Dictionary<string, Stream>();
                 foreach (var entry in entries) 
                 {
-                    var tmpPos = (Console.CursorLeft, Console.CursorTop);
-                    Console.SetCursorPosition(currEntryPos.CursorLeft, currEntryPos.CursorTop);
+                    (int, int) tmpPos = (Console.CursorLeft, Console.CursorTop);
+                    Console.SetCursorPosition(currEntryPos.Item1, currEntryPos.Item2);
                     Console.WriteLine($"Processing entry {entryNum}/{numEntries} ({(int)Math.Round(((float)entryNum / (float)numEntries) * 100)}%)");
-                    Console.SetCursorPosition(tmpPos.CursorLeft, tmpPos.CursorTop);
+                    Console.SetCursorPosition(tmpPos.Item1, tmpPos.Item2);
                     entryNum++;
                     Stream data;
                     if (entry.FileSize == 0)
@@ -385,13 +388,86 @@ namespace BinderTool
                         entry.IsEncrypted,
                         fileNameFound);
 
-                    ProcessFile(fileName, options, data);
-                    
                     extracted++;
+
+                    //.bdts and .bhds require special processing to extract, but since you need 2 files to extract them ProcessFile doesn't work well for them
+                    //Fortunately, they seem to only appear in encrypted .bdts, so we add a special case for them
+                    if (options.AutoExtractBdt && extension.EndsWith("bdt")) {
+                        bdts.Add((fileName, entry.FileNameHash, data));
+                        continue;
+                    }
+                    if (options.AutoExtractBdt && extension.EndsWith("bhd")) {
+                        if (!fileNameFound) fileName = entry.FileNameHash.ToString();
+                        bhds[fileName] = data;
+                        continue;
+                    }
+
+                    bytesWritten += ProcessFile(fileName, options, data);
+                }
+                //process .bdt files if we need to
+                if (options.AutoExtractBdt) {
+                    Console.WriteLine("Unpacking inner .bdt files...");
+                    foreach (var (fileName, hash, data) in bdts) {
+                        Stream bhd;
+                        if (bhds.TryGetValue(fileName.Replace("bdt", "bhd"), out bhd)) {
+                            bhds.Remove(fileName.Replace("bdt", "bhd"));
+                        } else {
+                            // HACK: Adding 132 to a hash of a text that ends with XXX.bdt will give you the hash of XXX.bhd for games before Elden Ring
+                            // (h-d) * prime + (d-t) = 4 * prime - 16
+                            // prime = 37 for older games, 133 for elden ring
+                            var oldGamesBhdHash = hash + 132;
+                            if (bhds.TryGetValue(oldGamesBhdHash.ToString(), out bhd)) {
+                                bhds.Remove(oldGamesBhdHash.ToString());
+                            } else {
+                                // HACK: Adding 516 to a hash of a text that ends with XXX.bdt will give you the hash of XXX.bhd for Elden Ring
+                                var newGamesBhdHash = hash + 516;
+                                if (bhds.TryGetValue(newGamesBhdHash.ToString(), out bhd)) {
+                                    bhds.Remove(newGamesBhdHash.ToString());
+                                } else {
+                                    //couldn't find the .bhd, output the raw .bdt instead
+                                    Console.WriteLine($"Couldn't find .bhd for \"{fileName}\", outputting raw file instead");
+                                    bytesWritten += WriteFile(Path.Combine(options.OutputPath, fileName), data);
+                                    continue;
+                                }
+                            }
+                        }
+                        var newOptions = options.Clone();
+                        if (Regex.IsMatch(fileName, @"\d+_.+\.bdt$")) {
+                            newOptions.OutputPath = Path.Combine(options.OutputPath, $"{bdts}\\{hash}");
+                        } else {
+                            newOptions.OutputPath = Path.Combine(options.OutputPath, Path.GetDirectoryName(fileName));
+                        }
+                        bytesWritten += UnpackBdf4File(data, bhd, newOptions);
+                    }
+                    //leftover .bhd files that didn't have a .bdt paired
+                    foreach (var hash in bhds.Keys) {
+                        var file = bhds[hash];
+                        var name = $"{hash:D10}_{fileNameWithoutExtension}.bhd";
+                        bytesWritten += WriteFile(Path.Combine(options.OutputPath, name), file);
+                    }
+                    Console.WriteLine("Dne unpacking inner .bdt files.");
                 }
                 Console.WriteLine($"Succesfully extracted {extracted}/{numEntries} files ({numEntries - extracted} failed), totaling {bytesWritten} bytes written to disk");
                 Console.WriteLine($"{missingNames} file names were unknown");
             }
+        }
+
+        /// <summary>
+        /// Writes binary data from a <code>Stream</code> to a file.
+        /// </summary>
+        /// <returns>The number of bytes written to disk</returns>
+        public static ulong WriteFile(string path, Stream data)
+        {
+            Directory.CreateDirectory(Path.GetDirectoryName(path));
+            FileStream outS = new FileStream(path, FileMode.Create);
+            byte[] buf = new byte[1000];
+            data.Seek(0, SeekOrigin.Begin);
+            for (long pos = 0; pos < data.Length; pos += buf.Length) {
+                int read = data.Read(buf, 0, buf.Length);
+                outS.Write(buf, 0, read);
+            }
+            outS.Close();
+            return (ulong)data.Length;
         }
 
         /// <summary>
@@ -403,16 +479,32 @@ namespace BinderTool
         /// <returns>The number of bytes written to disk</returns>
         private static ulong ProcessFile(string filename, Options options, Stream data)
         {
-            string[] sp = filename.Split('/');
-            string[] sp2 = sp[sp.Length - 1].Split('.');
-            string extension = sp2[sp2.Length - 1];
+            string[] sp = filename.Split('.');
+            string[] sp2 = filename.Replace('\\', '/').Split('/');
+            sp2 = sp2[sp2.Length - 1].Split('.');
+            string extension = "."+sp[sp.Length - 1];
+            if (extension == ".dcx") {
+                DcxFile dcxFile = DcxFile.Read(data);
+                data = new MemoryStream(dcxFile.Decompress());
+                filename = filename.Replace(".dcx", "");
+                sp = filename.Split('.');
+                extension = "."+sp[sp.Length - 1];
+                sp2 = filename.Replace('\\', '/').Split('/');
+                sp2 = sp2[sp2.Length - 1].Split('.');
+            }
             //auto extract .bnd
             if (options.AutoExtractBnd && extension.EndsWith("bnd")) {
                 return UnpackBndFile(data, options);
             }
+            //auto extract .tpf
+            if (options.AutoExtractTpf && extension == ".tpf") {
+                Options newOptions = options.Clone();
+                newOptions.OutputPath = Path.Combine(options.OutputPath, filename);
+                return UnpackTpfFile(data, newOptions);
+            }
             //auto extract .param
             if (options.AutoExtractParam && extension == ".param") {
-                return UnpackParamFile(data, sp2[sp2.Length - 2], Path.Combine(options.OutputPath, filename.Replace(".param", "")));
+                return UnpackParamFile(data, sp2[sp.Length - 2], Path.Combine(options.OutputPath, filename.Replace(".param", "")));
             }
             //auto extract .fmg
             if (options.AutoExtractFmg && extension == ".fmg") {
@@ -431,16 +523,7 @@ namespace BinderTool
             }
             //not doing any auto extract, just output the raw file
             string newFileNamePath = Path.Combine(options.OutputPath, filename);
-            Directory.CreateDirectory(Path.GetDirectoryName(newFileNamePath));
-            FileStream outS = new FileStream(newFileNamePath, FileMode.OpenOrCreate);
-            byte[] buf = new byte[1000];
-            data.Seek(0, SeekOrigin.Begin);
-            for (long pos = 0; pos < data.Length; pos += buf.Length) {
-                int read = data.Read(buf, 0, buf.Length);
-                outS.Write(buf, 0, read);
-            }
-            outS.Close();
-            return (ulong)data.Length;
+            return WriteFile(newFileNamePath, data);
         }
 
         /// <summary>
@@ -825,7 +908,7 @@ namespace BinderTool
             string bhf4FilePath = Path.Combine(bdfDirectoryPath, Path.GetFileNameWithoutExtension(options.InputPath) + bhf4Extension);
             if (!File.Exists(bhf4FilePath))
             {
-                // HACK: Adding 132 to a hash of a text that ends with XXX.bdt will give you the hash of XXX.bhd.
+                // HACK: Adding 132 to a hash of a text that ends with XXX.bdt will give you the hash of XXX.bhd for games before Elden Ring
                 string[] split = Path.GetFileNameWithoutExtension(options.InputPath).Split('_');
                 uint hash;
                 if (uint.TryParse(split[0], out hash))
@@ -835,28 +918,39 @@ namespace BinderTool
                     bhf4FilePath = Path.Combine(bdfDirectoryPath, string.Join("_", split) + ".bhd");
                 }
             }
-
-            using (Bdf4FileStream bdf4InputStream = Bdf4FileStream.OpenFile(options.InputPath, FileMode.Open, FileAccess.Read))
-            {
-                Bhf4File bhf4File = Bhf4File.OpenBhf4File(bhf4FilePath);
-                foreach (var entry in bhf4File.Entries)
-                {
-                    MemoryStream data = bdf4InputStream.Read(entry.FileOffset, entry.FileSize);
-
-                    string fileName = entry.FileName;
-                    string fileExtension = Path.GetExtension(fileName);
-                    if (fileExtension == ".dcx")
-                    {
-                        DcxFile dcxFile = DcxFile.Read(data);
-                        data = new MemoryStream(dcxFile.Decompress());
-                        fileName = Path.Combine(Path.GetDirectoryName(fileName), Path.GetFileNameWithoutExtension(fileName));
-                    }
-
-                    string outputFilePath = Path.Combine(options.OutputPath, fileName);
-                    Directory.CreateDirectory(Path.GetDirectoryName(outputFilePath));
-                    File.WriteAllBytes(outputFilePath, data.ToArray());
+            if (!File.Exists(bhf4FilePath)) {
+                // HACK: Adding 516 to a hash of a text that ends with XXX.bdt will give you the hash of XXX.bhd for Elden Ring
+                string[] split = Path.GetFileNameWithoutExtension(options.InputPath).Split('_');
+                ulong hash;
+                if (ulong.TryParse(split[0], out hash)) {
+                    hash += 516;
+                    split[0] = hash.ToString("D10");
+                    bhf4FilePath = Path.Combine(bdfDirectoryPath, string.Join("_", split) + ".bhd");
                 }
             }
+
+            using (FileStream bdf4InputStream = File.Open(options.InputPath, FileMode.Open, FileAccess.Read))
+            {
+                using (Stream bhf4Stream = File.Open(bhf4FilePath, FileMode.Open)) {
+                    UnpackBdf4File(bdf4InputStream, bhf4Stream, options);
+                }
+            }
+        }
+
+        /// <summary>
+        /// Unpacks a bdf4 file from its component streams and writes the unpacked files to disk.
+        /// </summary>
+        /// <returns>The number of bytes written to disk</returns>
+        private static ulong UnpackBdf4File(Stream bdt, Stream bhd, Options options)
+        {
+            ulong bytesWritten = 0;
+            var header = Bhf4File.OpenBhf4File(bhd);
+            var bdtStream = Bdf4FileStream.OpenStream(bdt);
+            foreach (var entry in header.Entries) {
+                MemoryStream data = bdtStream.Read(entry.FileOffset, entry.FileSize);
+                bytesWritten += ProcessFile(entry.FileName, options, data);
+            }
+            return bytesWritten;
         }
 
         /// <summary>
@@ -866,17 +960,26 @@ namespace BinderTool
         {
             using (FileStream inputStream = new FileStream(options.InputPath, FileMode.Open, FileAccess.Read))
             {
-                TpfFile tpfFile = TpfFile.OpenTpfFile(inputStream);
-                foreach (var entry in tpfFile.Entries)
-                {
-                    string outputFilePath = Path.Combine(options.OutputPath, entry.FileName);
-                    Directory.CreateDirectory(Path.GetDirectoryName(outputFilePath));
-                    using (var outputStream = File.Create(outputFilePath))
-                    {
-                        entry.Write(outputStream);
-                    }
+                UnpackTpfFile(inputStream, options);
+            }
+        }
+
+        /// <summary>
+        /// Unpacks a .tpf file from a given <code>Stream</code> and writes the unpacked files to disk
+        /// </summary>
+        /// <returns>The number of bytes written to disk</returns>
+        private static ulong UnpackTpfFile(Stream data, Options options)
+        {
+            ulong bytesWritten = 0;
+            TpfFile tpfFile = TpfFile.OpenTpfFile(data);
+            foreach (var entry in tpfFile.Entries) {
+                string outputFilePath = Path.Combine(options.OutputPath, entry.FileName);
+                Directory.CreateDirectory(Path.GetDirectoryName(outputFilePath));
+                using (var outputStream = File.Create(outputFilePath)) {
+                    bytesWritten += entry.Write(outputStream);
                 }
             }
+            return bytesWritten;
         }
 
         /// <summary>
@@ -1035,6 +1138,7 @@ namespace BinderTool
             }
 
             outputPath += ".txt";
+            Directory.CreateDirectory(Path.GetDirectoryName(outputPath));
             File.WriteAllText(outputPath, builder.ToString());
             return (ulong)new FileInfo(outputPath).Length;
         }
@@ -1045,6 +1149,7 @@ namespace BinderTool
         private static void UnpackEnflFile(Options options)
         {
             var ans = UnpackEnflFile(new FileStream(options.InputPath, FileMode.Open));
+            Directory.CreateDirectory(Path.GetDirectoryName(options.OutputPath));
             File.WriteAllText(options.OutputPath + ".csv", ans);
         }
 

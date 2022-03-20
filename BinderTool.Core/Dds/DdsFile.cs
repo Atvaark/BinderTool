@@ -15,7 +15,7 @@ namespace BinderTool.Core.Dds
 
         public byte[] Data { get; set; }
         
-        public void Write(Stream outputStream)
+        public ulong Write(Stream outputStream)
         {
             BinaryWriter writer = new BinaryWriter(outputStream, Encoding.Default, true);
             writer.Write(MagicNumber);
@@ -26,6 +26,7 @@ namespace BinderTool.Core.Dds
             }
 
             writer.Write(Data);
+            return (ulong)(4 + Header.Size + (Header.IsDx10() ? 20 : 0) + Data.Length);
         }
 
         public static byte[] ConvertData(byte[] sourceBuffer, int height, int width, DxgiFormat dxgiFormat)
