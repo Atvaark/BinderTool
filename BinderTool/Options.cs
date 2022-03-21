@@ -109,6 +109,14 @@ namespace BinderTool
                 return (FileType.Regulation, GameVersion.DarkSouls2);
             }
 
+            //Sekiro digital artwork & mini soundtrack
+            if (fileName == "Data.bdt") {
+                return (FileType.EncryptedBdt, GameVersion.Sekiro);
+            }
+            if (fileName == "Data.bhd") {
+                return (FileType.EncryptedBhd, GameVersion.Sekiro);
+            }
+
             // file.dcx
             // file.bnd.dcx
             if (fileName.EndsWith(".dcx", StringComparison.InvariantCultureIgnoreCase))

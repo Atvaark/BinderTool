@@ -205,6 +205,9 @@ namespace BinderTool
             Finish();
         }
 
+        /// <summary>
+        /// Prevents the console window from closing automatically in debug builds
+        /// </summary>
         private static void Finish()
         {
 #if (DEBUG)
@@ -620,8 +623,8 @@ namespace BinderTool
                 return extension;
             }
 
-            if ((gameVersion == GameVersion.Sekiro || gameVersion == GameVersion.EldenRing) 
-                && TryGetUnicodeSignature(data, 4, out signature)
+            //some files have UTF-16 signatures
+            if (TryGetUnicodeSignature(data, 4, out signature)
                 && TryGetFileExtension(signature, out extension, gameVersion))
             {
                 return extension;
