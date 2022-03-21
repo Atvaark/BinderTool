@@ -918,6 +918,9 @@ namespace BinderTool
                 case GameVersion.DarkSouls3:
                     key = DecryptionKeys.RegulationFileKeyDs3;
                     break;
+                case GameVersion.EldenRing:
+                    key = DecryptionKeys.RegulationFileKeyEr;
+                    break;
                 default:
                     key = new byte[16];
                     break;
